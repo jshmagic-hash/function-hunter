@@ -104,7 +104,9 @@
   .qtext .mono{font-size:1.05em;color:#fff;}
   .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
   @media(max-width:480px){.choices{grid-template-columns:1fr;}}
-  .choice{background:#0d0a17;border:2px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;font-weight:700;cursor:pointer;text-align:left;color:var(--ink);font-family:inherit;transition:.08s;}
+  .choice{background:#0d0a17;border:2px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;font-weight:700;cursor:pointer;text-align:left;color:var(--ink);font-family:inherit;transition:.08s;display:flex;align-items:center;gap:10px;}
+  .keytag{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#1c1430;border:1.5px solid var(--line);color:var(--neon2);font-size:12px;font-weight:800;font-family:ui-monospace,monospace;}
+  .lvcard .lvkey{position:absolute;top:8px;left:8px;}
   .choice:hover{border-color:var(--neon2);}
   .choice.correct{border-color:var(--ok);background:rgba(62,240,138,.16);}
   .choice.wrong{border-color:var(--bad);background:rgba(255,84,112,.16);}
@@ -230,7 +232,6 @@
           <span class="qbadge" id="qBadge">문제</span>
           <span class="small" id="qProgress"></span>
         </div>
-        <div class="qtimerbar"><i id="qTimerFill"></i></div>
         <div class="qtext" id="qText"></div>
         <div class="choices" id="qChoices"></div>
         <div class="qinput" id="qInputWrap" style="display:none;">
@@ -724,6 +725,28 @@ const keys={};
 window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; });
 window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 
+// 숫자키 1~4 단축키: 퀴즈 보기 선택 / 강화 카드 선택
+window.addEventListener('keydown',e=>{
+  // 단답형 입력칸에 타이핑 중일 때는 숫자를 그대로 입력하도록 무시
+  if(document.activeElement && document.activeElement.id==='qInput') return;
+  const map={'1':0,'2':1,'3':2,'4':3};
+  if(!(e.key in map)) return;
+  const idx=map[e.key];
+  // 1) 강화/보상 카드가 떠 있으면 그것부터 선택
+  const lv=$('levelWrap');
+  if(lv && lv.classList.contains('on')){
+    const cards=$('lvCards').children;
+    if(cards[idx]){ e.preventDefault(); cards[idx].click(); }
+    return;
+  }
+  // 2) 퀴즈 객관식 보기 선택 (아직 풀지 않은 상태)
+  const qz=$('quizWrap');
+  if(qz && qz.classList.contains('on') && S && S.curQuiz && !S.curQuiz.resolved){
+    const btns=$('qChoices').children;
+    if($('qChoices').style.display!=='none' && btns[idx]){ e.preventDefault(); btns[idx].click(); }
+  }
+});
+
 let joy={active:false,vx:0,vy:0};
 (function(){
   const stick=$('stick'), knob=stick.querySelector('.knob');
@@ -787,7 +810,7 @@ function mulberry32(seed){
 function newGame(info){
   showScreen('screen-game'); resize();
   S={info, pl:freshPlayer(info.hero), enemies:[],projs:[],orbs:[],parts:[],floats:[],
-     time:0,spawnT:0,spawnInt:1500,bossT:18000,bossIdx:0,boss:null,
+     time:0,spawnT:1600,spawnInt:1900,bossT:18000,bossIdx:0,boss:null,
      running:true,paused:false,score:0,quizCount:0,quizCorrect:0,qLog:[],
      lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
   buildForest();
@@ -850,7 +873,7 @@ function update(dt){
   if(pl.hurtCd>0) pl.hurtCd-=dt;
 
   S.spawnT-=dt*16.667;
-  if(S.spawnT<=0){ const n=1+Math.floor(S.time/30000); for(let i=0;i<n;i++) spawnEnemy(); S.spawnT=Math.max(420,S.spawnInt-S.time/120); }
+  if(S.spawnT<=0){ const n=1+Math.floor(S.time/45000); for(let i=0;i<n;i++) spawnEnemy(); S.spawnT=Math.max(520,S.spawnInt-S.time/150); }
   S.bossT-=dt*16.667;
   if(S.bossT<=0 && !S.boss){ spawnBoss(); S.bossT=42000; }
 
@@ -1414,16 +1437,8 @@ function drawBoss(e){
 
 /* ===================== 퀴즈 ===================== */
 function startQuizTimer(){
+  // 제한시간 없음: 학생이 충분히 생각하고 풀 수 있도록 타이머를 두지 않는다.
   clearInterval(S._qt);
-  const fill=$('qTimerFill');
-  S._qt=setInterval(()=>{
-    const q=S.curQuiz; if(!q||q.resolved){clearInterval(S._qt);return;}
-    const frac=Math.max(0,1-(Date.now()-q.t0)/q.limit);
-    fill.style.width=(frac*100)+'%';
-    fill.style.background = frac>0.5?'linear-gradient(90deg,#3ef08a,#5af7ff)'
-      : frac>0.25?'linear-gradient(90deg,#ffd24d,#ffb14d)':'linear-gradient(90deg,#ff7a3d,#ff5470)';
-    if(frac<=0){ resolveQuiz(false,true); }
-  },80);
 }
 function openQuiz(diff,opts){
   S.paused=true;
@@ -1432,14 +1447,14 @@ function openQuiz(diff,opts){
   S.curQuiz={p,opts,resolved:false,t0:Date.now(),limit:p.time*1000};
   const bd=$('qBadge'); bd.className='qbadge d'+diff;
   bd.textContent = diff===3?'💀 보스 특별문제':((diff===1?'기초 진단':'적용 문제')+' · '+p.area);
-  $('qProgress').textContent=`제한 ${p.time}초 · 정답 시 강력 보상`;
+  $('qProgress').textContent=`정답 시 강력 보상 · 1~4 키로 선택 가능`;
   $('qText').innerHTML=p.q;
   const res=$('qResult'); res.style.display='none'; res.className='qresult';
   const ch=$('qChoices'), iw=$('qInputWrap');
   ch.innerHTML='';
   if(p.type==='mc'){ iw.style.display='none'; ch.style.display='grid';
     p.choices.forEach((c,i)=>{ const b=document.createElement('button'); b.className='choice';
-      b.innerHTML='<span class="mono">'+c+'</span>'; b.dataset.i=i; b.onclick=()=>{ if(!S.curQuiz.resolved) resolveQuiz(i===p.answerIndex,false,i); };
+      b.innerHTML='<span class="keytag">'+(i+1)+'</span><span class="mono">'+c+'</span>'; b.dataset.i=i; b.onclick=()=>{ if(!S.curQuiz.resolved) resolveQuiz(i===p.answerIndex,false,i); };
       ch.appendChild(b); });
   } else { ch.style.display='none'; iw.style.display='flex'; $('qInput').value=''; setTimeout(()=>{try{$('qInput').focus();}catch(e){}},60); }
   $('quizWrap').classList.add('on');
@@ -1481,9 +1496,9 @@ function openLevelChoices(correct,opts){
   $('lvTitle').textContent = correct? '🎉 정답 보상!' : '강화 선택';
   $('lvSub').textContent = correct? '희귀·전설급 강화를 획득했습니다!' : '보통 등급 강화 중 하나를 고르세요';
   const wrap=$('lvCards'); wrap.innerHTML='';
-  choices.forEach(it=>{ const c=document.createElement('div'); c.className='lvcard';
+  choices.forEach((it,ci)=>{ const c=document.createElement('div'); c.className='lvcard';
     const rk = it.tier==='epic'?'epic':it.tier==='rare'?'rare':'normal';
-    c.innerHTML=`<span class="rk ${rk}">${it.tier==='epic'?'전설':it.tier==='rare'?'희귀':'보통'}</span>
+    c.innerHTML=`<span class="keytag lvkey">${ci+1}</span><span class="rk ${rk}">${it.tier==='epic'?'전설':it.tier==='rare'?'희귀':'보통'}</span>
       <div class="ic">${it.em}</div><h4>${it.name}</h4><p>${it.desc}</p>`;
     c.onclick=()=>{ it.apply(S.pl); unlockDex('item',it.id); $('levelWrap').classList.remove('on'); S.paused=false; S.lastTs=performance.now(); toast(it.em+' '+it.name+' 획득!'); };
     wrap.appendChild(c); });
@@ -1580,7 +1595,7 @@ function snapshot(){ if(!S)return; const pl=S.pl;
 function loadSave(){ const s=DB.save(); if(!s)return false;
   showScreen('screen-game'); resize();
   S={info:s.info,pl:s.pl,enemies:[],projs:[],orbs:[],parts:[],floats:[],
-     time:s.time,spawnT:0,spawnInt:1500,bossT:20000,bossIdx:s.bossIdx||0,boss:null,
+     time:s.time,spawnT:0,spawnInt:1900,bossT:20000,bossIdx:s.bossIdx||0,boss:null,
      running:true,paused:false,score:s.score,quizCount:s.quizCount,quizCorrect:s.quizCorrect,qLog:s.qLog||[],
      lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
   // 호환성
