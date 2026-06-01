@@ -885,7 +885,7 @@ const HEROES = {
 /* =========================================================
    게임 본체
    ========================================================= */
-const ADMIN_CODE = "mathteacher";   // ★ 선생님 접속 코드 — 배포 전 원하는 코드로 바꾸세요 (화면에는 표시되지 않습니다)
+const ADMIN_CODE = "teacherhoon";   // ★ 선생님 접속 코드 — 배포 전 원하는 코드로 바꾸세요 (화면에는 표시되지 않습니다)
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -1027,17 +1027,20 @@ function spawnEnemy(){
     color:m.color,em:m.em,rare:m.rare,boss:false,ang:0,walkT:Math.random()*100});
 }
 function spawnBoss(){
-  const b=BOSSES[S.bossIdx%BOSSES.length];
-  const cycle = Math.floor(S.bossIdx / BOSSES.length); // 한 바퀴 다 돌면 더 강해짐
+  const n=S.bossIdx;                              // 0 = 첫 보스, 1 = 두 번째 ...
+  const b=BOSSES[n%BOSSES.length];
+  const cycle = Math.floor(n / BOSSES.length);    // 한 바퀴 다 돌면 추가로 강해짐
   S.bossIdx++;
   unlockDex('boss',b.id);
-  const t=S.time/1000;
-  // 보스 강화: 기본 체력 상향(1.6배) + 시간/주기에 따른 추가 배수
-  const hpMul = 1.6 * (1 + t/200) * (1 + cycle*0.6);
-  const hp = Math.round(b.hp * hpMul);
-  const dmg = Math.round(b.dmg * (1.25 + cycle*0.3) + (t>90?(t-90)/30:0));
-  const spd = b.spd * (1.3 + Math.min(0.5, t/260));
-  const e={type:b,id:b.id,x:W/2,y:-40,r:b.r,hp,maxHp:hp,spd,dmg,xp:Math.round(b.xp*(1+cycle*0.3)),
+  // 보스 순번(n)에 따라 곡선을 잡는다: 초반은 낮게, 중후반은 가파르게 상승.
+  // 체력: 1번 보스 ≈ 0.85배, 이후 보스마다 가파르게 증가, 반복 주기마다 추가.
+  const hpMul  = (0.85 + n*0.42) * (1 + cycle*0.7);
+  const dmgMul = (0.85 + n*0.16) * (1 + cycle*0.35);
+  const spdMul = 1.15 + Math.min(0.55, n*0.05);
+  const hp  = Math.round(b.hp  * hpMul);
+  const dmg = Math.round(b.dmg * dmgMul);
+  const spd = b.spd * spdMul;
+  const e={type:b,id:b.id,x:W/2,y:-40,r:b.r,hp,maxHp:hp,spd,dmg,xp:Math.round(b.xp*(1+n*0.08+cycle*0.3)),
     color:b.color,em:b.em,boss:true,bossData:b,walkT:0};
   S.enemies.push(e); S.boss=e;
   toast('💀 보스 '+b.name+' 등장!');
