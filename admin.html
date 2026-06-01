@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>함수 헌터 : 이차함수 입문 디펜스</title>
+<style>
+  :root{
+    --bg:#0a0710; --bg2:#140d22; --panel:#1a1230; --panel2:#241640;
+    --ink:#e9e3ff; --dim:#9a8fc0; --line:#3a2a66;
+    --neon:#39f4a8; --neon2:#7af7ff; --gold:#ffcf4d; --rare:#c46bff;
+    --hot:#ff5a8a; --warn:#ff6b3d; --ok:#3ef08a; --bad:#ff5470;
+    --shadow:0 0 0 2px #000, 0 6px 0 #000;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;}
+  body{
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #2a1a52 0%, transparent 60%),
+      radial-gradient(900px 600px at 100% 110%, #16263f 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink); overflow:hidden; user-select:none; touch-action:none;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:9999;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0px, rgba(0,0,0,.18) 1px, transparent 2px, transparent 4px);
+    mix-blend-mode:overlay; opacity:.5;
+  }
+  .mono{font-family:"DM Mono",ui-monospace,Menlo,Consolas,monospace;}
+  #app{position:fixed; inset:0; display:flex; align-items:center; justify-content:center;}
+  .screen{position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; padding:18px;}
+  .screen.on{display:flex; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
+
+  .card{
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    border:2px solid var(--line); border-radius:14px;
+    box-shadow:0 0 0 2px #000, 0 18px 40px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
+    padding:22px; width:min(720px,94vw); max-height:92vh; overflow:auto;
+  }
+  h1.logo{
+    font-weight:900; letter-spacing:1px; margin:0; text-align:center; line-height:1.05;
+    font-size:clamp(26px,6vw,46px);
+    text-shadow:0 0 18px rgba(57,244,168,.55), 0 3px 0 #000;
+  }
+  h1.logo .a{color:var(--neon);} h1.logo .b{color:var(--neon2);} h1.logo .c{color:var(--gold);}
+  .sub{ text-align:center; color:var(--dim); margin:6px 0 18px; font-size:13px; letter-spacing:.5px;}
+  .tag{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:11px;color:var(--neon2);margin:2px;}
+
+  .btn{
+    appearance:none;border:2px solid #000;cursor:pointer;font-weight:800;letter-spacing:.5px;
+    border-radius:12px;padding:14px 18px;font-size:16px;color:#08120c;
+    background:linear-gradient(180deg,#5ffec0,#23c98b);
+    box-shadow:0 5px 0 #0b6b48,0 0 0 2px #000; transition:transform .05s, box-shadow .05s;
+    font-family:inherit; width:100%;
+  }
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #0b6b48,0 0 0 2px #000;}
+  .btn.alt{background:linear-gradient(180deg,#9fd0ff,#5aa7f0);color:#06121f;box-shadow:0 5px 0 #1b4f86,0 0 0 2px #000;}
+  .btn.ghost{background:linear-gradient(180deg,#2a1c46,#1d1334);color:var(--ink);box-shadow:0 5px 0 #100a1f,0 0 0 2px #000;}
+  .btn.gold{background:linear-gradient(180deg,#ffe08a,#f0b830);color:#3a2600;box-shadow:0 5px 0 #946600,0 0 0 2px #000;}
+  .btn.sm{padding:9px 12px;font-size:13px;border-radius:10px;}
+  .row{display:flex;gap:10px;flex-wrap:wrap;}
+  .row > *{flex:1;}
+  label.fld{display:block;margin:8px 0;font-size:13px;color:var(--dim);}
+  label.fld span{display:block;margin-bottom:4px;}
+  input,select{
+    width:100%;background:#0d0a17;border:2px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:11px 12px;font-size:15px;font-family:inherit;outline:none;
+  }
+  input:focus,select:focus{border-color:var(--neon);}
+
+  #game{padding:0;}
+  #stage{position:absolute;inset:0;}
+  canvas{display:block;width:100%;height:100%;image-rendering:pixelated;}
+  #hud{position:absolute;left:0;right:0;top:0;padding:10px 12px;pointer-events:none;display:flex;flex-direction:column;gap:6px;}
+  .bar{height:16px;border:2px solid #000;border-radius:8px;background:#120c22;overflow:hidden;position:relative;box-shadow:0 0 0 1px var(--line);}
+  .bar > i{display:block;height:100%;width:50%;transition:width .15s;}
+  .bar.hp > i{background:linear-gradient(90deg,#ff7a8a,#ff3d63);}
+  .bar.xp > i{background:linear-gradient(90deg,#8af,#5af7ff);}
+  .bar .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000;letter-spacing:.5px;}
+  #topstats{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:800;color:var(--ink);text-shadow:0 1px 2px #000;}
+  #topstats .pill{background:rgba(10,7,20,.7);border:1px solid var(--line);border-radius:8px;padding:3px 8px;}
+  #topstats .gold{color:var(--gold);}
+  #miniinfo{position:absolute;left:10px;bottom:10px;font-size:11px;color:var(--dim);background:rgba(10,7,20,.6);border:1px solid var(--line);border-radius:8px;padding:6px 8px;pointer-events:none;}
+  #ctrls{position:absolute;right:10px;bottom:10px;display:flex;gap:8px;}
+  #ctrls .btn{width:auto;}
+  #pausebtn{pointer-events:auto;}
+
+  #stick{position:absolute;left:14px;bottom:54px;width:120px;height:120px;border-radius:50%;
+    border:2px solid var(--line);background:rgba(20,13,34,.5);display:none;touch-action:none;}
+  #stick .knob{position:absolute;left:50%;top:50%;width:48px;height:48px;border-radius:50%;
+    transform:translate(-50%,-50%);background:linear-gradient(180deg,#5ffec0,#23c98b);border:2px solid #000;}
+
+  #quizWrap{position:absolute;inset:0;background:rgba(5,3,12,.78);display:none;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(3px);}
+  #quizWrap.on{display:flex;animation:fade .2s;}
+  .quiz{width:min(560px,94vw);}
+  .qhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .qbadge{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;border:1px solid var(--line);}
+  .qbadge.d1{color:var(--ok);} .qbadge.d2{color:var(--neon2);} .qbadge.d3{color:var(--gold);}
+  .qtimerbar{height:12px;border:2px solid #000;border-radius:8px;background:#120c22;overflow:hidden;box-shadow:0 0 0 1px var(--line);margin:10px 0 14px;}
+  .qtimerbar > i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#3ef08a,#5af7ff);transition:width .25s linear, background .4s;}
+  .qtext{font-size:clamp(18px,4.6vw,24px);font-weight:800;line-height:1.5;margin:6px 0 14px;}
+  .qtext .mono{font-size:1.05em;color:#fff;}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:480px){.choices{grid-template-columns:1fr;}}
+  .choice{background:#0d0a17;border:2px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;font-weight:700;cursor:pointer;text-align:left;color:var(--ink);font-family:inherit;transition:.08s;display:flex;align-items:center;gap:10px;}
+  .keytag{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#1c1430;border:1.5px solid var(--line);color:var(--neon2);font-size:12px;font-weight:800;font-family:ui-monospace,monospace;}
+  .lvcard .lvkey{position:absolute;top:8px;left:8px;}
+  .choice:hover{border-color:var(--neon2);}
+  .choice.correct{border-color:var(--ok);background:rgba(62,240,138,.16);}
+  .choice.wrong{border-color:var(--bad);background:rgba(255,84,112,.16);}
+  .qinput{display:flex;gap:8px;}
+  .qinput input{font-size:20px;text-align:center;font-weight:800;}
+  .qresult{margin-top:12px;padding:12px;border-radius:10px;border:2px solid var(--line);font-size:14px;line-height:1.55;display:none;}
+  .qresult.ok{border-color:var(--ok);background:rgba(62,240,138,.1);}
+  .qresult.bad{border-color:var(--bad);background:rgba(255,84,112,.1);}
+  .qresult b{color:var(--gold);}
+
+  #levelWrap{position:absolute;inset:0;background:rgba(5,3,12,.82);display:none;align-items:center;justify-content:center;z-index:48;backdrop-filter:blur(3px);}
+  #levelWrap.on{display:flex;animation:fade .2s;}
+  .lvcards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  @media(max-width:560px){.lvcards{grid-template-columns:1fr;}}
+  .lvcard{background:#0d0a17;border:2px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;transition:.08s;position:relative;overflow:hidden;}
+  .lvcard:hover{transform:translateY(-3px);border-color:var(--neon);}
+  .lvcard .ic{font-size:30px;}
+  .lvcard h4{margin:6px 0 4px;font-size:15px;}
+  .lvcard p{margin:0;font-size:12px;color:var(--dim);line-height:1.45;}
+  .lvcard .rk{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;}
+  .rk.normal{color:#bcd;background:#2a3550;} .rk.rare{color:#08120c;background:var(--rare);} .rk.epic{color:#3a2600;background:var(--gold);}
+  .rk.weak{color:#ddd;background:#4a3a3a;}
+  .lvtitle{text-align:center;font-weight:900;font-size:20px;margin:0 0 4px;}
+  .lvsub{text-align:center;color:var(--dim);font-size:13px;margin:0 0 14px;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+  .dex{background:#0d0a17;border:2px solid var(--line);border-radius:12px;padding:12px;font-size:12px;position:relative;}
+  .dex .em{font-size:26px;}
+  .dex h5{margin:6px 0 3px;font-size:13px;}
+  .dex p{margin:0;color:var(--dim);line-height:1.4;}
+  .dex.locked{filter:grayscale(1) brightness(.55);}
+  .dex .rare-mark{position:absolute;top:6px;right:8px;font-size:10px;font-weight:800;color:var(--rare);}
+  .tbl{width:100%;border-collapse:collapse;font-size:13px;}
+  .tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;}
+  .tbl th{color:var(--neon2);font-size:11px;letter-spacing:.5px;}
+  .tbl tr.me{background:rgba(57,244,168,.1);}
+  .rank1{color:var(--gold);font-weight:900;} .rank2{color:#cfe;font-weight:800;} .rank3{color:#e8b07a;font-weight:800;}
+  .scroller{max-height:54vh;overflow:auto;border:1px solid var(--line);border-radius:10px;}
+  .seg{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;}
+  .seg .btn{width:auto;}
+  .hint{font-size:12px;color:var(--dim);line-height:1.5;}
+  .center{text-align:center;}
+  .big{font-size:clamp(30px,8vw,56px);font-weight:900;text-shadow:0 0 18px rgba(255,207,77,.5);}
+  .stat-line{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-bottom:1px dashed var(--line);}
+  .toast{position:absolute;left:50%;top:14%;transform:translateX(-50%);background:rgba(10,7,20,.9);border:2px solid var(--gold);color:var(--gold);font-weight:800;padding:8px 16px;border-radius:10px;z-index:60;display:none;font-size:14px;}
+  .toast.on{display:block;animation:pop .4s;}
+  @keyframes pop{0%{transform:translateX(-50%) scale(.7);opacity:0;}100%{transform:translateX(-50%) scale(1);opacity:1;}}
+  .small{font-size:11px;color:var(--dim);}
+  a.link{color:var(--neon2);cursor:pointer;text-decoration:underline;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-title" class="screen on">
+    <div class="card center">
+      <h1 class="logo"><span class="a">함수</span> <span class="b">헌터</span></h1>
+      <div class="sub">— 이차함수 입문 디펜스 · 사전지식 진단 RPG —</div>
+      <div style="margin:6px 0 16px;">
+        <span class="tag">일차함수</span><span class="tag">이차방정식</span><span class="tag">인수분해</span>
+        <span class="tag">자동사냥</span><span class="tag">도감</span>
+      </div>
+      <div id="resumeBox" style="display:none;margin-bottom:10px;">
+        <button class="btn gold" id="btnResume">▶ 이어하기</button>
+      </div>
+      <button class="btn" id="btnNew">🎮 새 게임 시작</button>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn alt sm" id="btnDex">📖 도감</button>
+        <button class="btn ghost sm" id="btnHall">🏆 명예의 전당</button>
+        <button class="btn ghost sm" id="btnHelp">❓ 방법</button>
+      </div>
+      <div class="small" style="margin-top:14px;">선생님 모드는 <a class="link" id="adminLink">여기</a></div>
+    </div>
+  </section>
+
+  <section id="screen-enroll" class="screen">
+    <div class="card">
+      <h2 style="margin-top:0">출전 명부 작성 ✍️</h2>
+      <p class="hint">명예의 전당 랭킹에 기록됩니다. 선생님 안내에 따라 정확히 입력하세요.</p>
+      <div class="row">
+        <label class="fld"><span>학년</span>
+          <select id="inGrade"><option>1</option><option>2</option><option selected>3</option></select>
+        </label>
+        <label class="fld"><span>반</span><input id="inClass" inputmode="numeric" placeholder="예: 4"></label>
+        <label class="fld"><span>번호</span><input id="inNo" inputmode="numeric" placeholder="예: 17"></label>
+      </div>
+      <label class="fld"><span>이름</span><input id="inName" placeholder="홍길동" maxlength="10"></label>
+      <label class="fld"><span>캐릭터 선택</span>
+        <select id="inHero">
+          <option value="warrior">⚔️ 검사 — 균형형 (체력+공격)</option>
+          <option value="mage">🔮 마법사 — 공격 특화 (관통)</option>
+          <option value="ranger">🏹 궁수 — 다중 사격 (속사)</option>
+          <option value="guardian">🛡️ 수호자 — 생존 특화 (높은 체력)</option>
+        </select>
+      </label>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn ghost sm" id="btnBackTitle1">← 뒤로</button>
+        <button class="btn" id="btnGo">출전! ▶</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-game" class="screen">
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <div id="hud">
+        <div id="topstats">
+          <span class="pill" id="hudInfo">Lv.1</span>
+          <span class="pill" id="hudTime">00:00</span>
+          <span class="pill gold" id="hudScore">0 pt</span>
+        </div>
+        <div class="bar hp"><i id="hpFill"></i><span class="lbl" id="hpLbl">HP</span></div>
+        <div class="bar xp"><i id="xpFill"></i><span class="lbl" id="xpLbl">EXP</span></div>
+      </div>
+      <div id="miniinfo">이동: WASD / 방향키 · 공격은 자동</div>
+      <div id="ctrls"><button class="btn ghost sm" id="pausebtn">⏸</button></div>
+      <div id="stick"><div class="knob"></div></div>
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <div id="quizWrap">
+      <div class="card quiz">
+        <div class="qhead">
+          <span class="qbadge" id="qBadge">문제</span>
+          <span class="small" id="qProgress"></span>
+        </div>
+        <div class="qtext" id="qText"></div>
+        <div class="choices" id="qChoices"></div>
+        <div class="qinput" id="qInputWrap" style="display:none;">
+          <input id="qInput" inputmode="text" autocomplete="off" placeholder="정답 입력">
+          <button class="btn sm" id="qSubmit" style="width:auto;padding:11px 18px;">확인</button>
+        </div>
+        <div class="qresult" id="qResult"></div>
+      </div>
+    </div>
+
+    <div id="levelWrap">
+      <div class="card">
+        <p class="lvtitle" id="lvTitle">LEVEL UP!</p>
+        <p class="lvsub" id="lvSub">강화를 선택하세요</p>
+        <div class="lvcards" id="lvCards"></div>
+      </div>
+    </div>
+
+    <div id="pauseWrap" class="screen" style="background:rgba(5,3,12,.85);z-index:55;">
+      <div class="card center">
+        <h2 style="margin-top:0">일시정지 ⏸</h2>
+        <button class="btn" id="btnResumePlay">계속하기 ▶</button>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn ghost sm" id="btnSaveQuit">💾 저장 후 종료</button>
+          <button class="btn ghost sm" id="btnGiveUp">포기 (게임오버)</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-over" class="screen">
+    <div class="card center">
+      <h2 style="margin-top:0" id="overTitle">게임 종료</h2>
+      <div class="big gold" id="overScore">0</div>
+      <div class="small">최종 점수</div>
+      <div style="margin:14px 0;text-align:left;">
+        <div class="stat-line"><span>생존 시간</span><b id="ovTime">-</b></div>
+        <div class="stat-line"><span>최종 레벨</span><b id="ovLevel">-</b></div>
+        <div class="stat-line"><span>처치 수</span><b id="ovKills">-</b></div>
+        <div class="stat-line"><span>문제 정답 / 시도</span><b id="ovQuiz">-</b></div>
+        <div class="stat-line"><span>정답률</span><b id="ovRate">-</b></div>
+        <div class="stat-line"><span>명예의 전당 순위</span><b id="ovRank">-</b></div>
+      </div>
+      <div id="weakBox" class="qresult" style="display:block;border-color:var(--neon2);background:rgba(122,247,255,.08);text-align:left;"></div>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" id="btnRetry">🔁 다시 도전</button>
+        <button class="btn alt sm" id="btnHall2">🏆 전당 보기</button>
+        <button class="btn ghost sm" id="btnTitle2">처음으로</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-dex" class="screen">
+    <div class="card">
+      <div class="qhead"><h2 style="margin:0">📖 헌터 도감</h2><button class="btn ghost sm" id="dexBack" style="width:auto">← 닫기</button></div>
+      <div class="seg">
+        <button class="btn alt sm" data-dex="monster">👾 몬스터</button>
+        <button class="btn ghost sm" data-dex="boss">💀 보스</button>
+        <button class="btn ghost sm" data-dex="item">⚡ 아이템</button>
+      </div>
+      <div class="small" id="dexCount"></div>
+      <div class="grid" id="dexGrid" style="margin-top:8px;"></div>
+    </div>
+  </section>
+
+  <section id="screen-hall" class="screen">
+    <div class="card">
+      <div class="qhead"><h2 style="margin:0">🏆 명예의 전당</h2><button class="btn ghost sm" id="hallBack" style="width:auto">← 닫기</button></div>
+      <div class="seg">
+        <select id="hallFilter" style="max-width:160px"><option value="all">전체 학급</option></select>
+        <button class="btn ghost sm" id="hallRefresh" style="width:auto">↻ 새로고침</button>
+      </div>
+      <div class="scroller"><table class="tbl"><thead><tr><th>#</th><th>소속</th><th>이름</th><th>점수</th><th>정답률</th></tr></thead><tbody id="hallBody"></tbody></table></div>
+      <div class="small" style="margin-top:8px;" id="hallNote"></div>
+    </div>
+  </section>
+
+  <section id="screen-admin" class="screen">
+    <div class="card">
+      <div class="qhead"><h2 style="margin:0">🧑‍🏫 선생님 모드</h2><button class="btn ghost sm" id="adminBack" style="width:auto">← 닫기</button></div>
+      <div id="adminGate">
+        <p class="hint">교사용 통계·데이터 다운로드 화면입니다. 접속 코드를 입력하세요.</p>
+        <label class="fld"><span>접속 코드</span><input id="adminPw" type="password" placeholder="접속 코드"></label>
+        <button class="btn" id="adminEnter">입장</button>
+      </div>
+      <div id="adminPanel" style="display:none;">
+        <div class="seg">
+          <button class="btn gold sm" id="dlLeader" style="width:auto">⬇ 랭킹 CSV</button>
+          <button class="btn gold sm" id="dlLog" style="width:auto">⬇ 문항응답 로그 CSV</button>
+          <button class="btn ghost sm" id="adminWipe" style="width:auto">🗑 데이터 초기화</button>
+        </div>
+        <h3 style="margin:14px 0 6px">문항 유형별 정답률 진단</h3>
+        <div class="scroller"><table class="tbl"><thead><tr><th>유형(진단영역)</th><th>시도</th><th>정답</th><th>정답률</th></tr></thead><tbody id="adminCat"></tbody></table></div>
+        <h3 style="margin:14px 0 6px">학생별 요약</h3>
+        <div class="scroller"><table class="tbl"><thead><tr><th>소속</th><th>이름</th><th>최고점</th><th>플레이</th><th>평균 정답률</th></tr></thead><tbody id="adminStu"></tbody></table></div>
+        <p class="small" id="adminNote" style="margin-top:8px;"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="screen-help" class="screen">
+    <div class="card">
+      <div class="qhead"><h2 style="margin:0">❓ 플레이 방법</h2><button class="btn ghost sm" id="helpBack" style="width:auto">← 닫기</button></div>
+      <div class="hint" style="line-height:1.7;font-size:13.5px;">
+        <p><b>1. 자동 사냥</b> — 캐릭터는 가장 가까운 적을 향해 <b>자동으로 공격</b>합니다. 몬스터는 플레이어를 향해 곧장 다가옵니다. <b>WASD / 방향키</b>(모바일은 왼쪽 조이스틱)로 이동하며 피하세요.</p>
+        <p><b>2. 레벨업 = 수학 시간!</b> — 경험치가 차면 <b>수학 문제</b>가 등장합니다. <b>맞히면 희귀·전설급 강화</b>를 골라서 받고, <b>틀리면 약한 보상 하나</b>만 받습니다. 보기와 강화 카드는 <b>키보드 1·2·3·4</b> 로도 고를 수 있어요. <b>제한시간은 없으니</b> 충분히 생각하고 푸세요.</p>
+        <p><b>3. 자석 효과</b> — 드랍 아이템은 가까이 가면 자동으로 끌려옵니다. 자석 아이템을 얻으면 흡인 범위가 더 넓어져요!</p>
+        <p><b>4. 숲의 모험</b> — 깊은 숲에서 펼쳐지는 함수 사냥. 풀잎과 꽃이 흩날리는 무대 위에서 몬스터를 처치하세요. 레벨이 오를수록 적은 <b>점점 빨라지고</b> 문제도 <b>점점 어려워집니다</b>.</p>
+        <p><b>5. 보스전</b> — 일정 시간마다 보스가 등장하고, 특별 문제가 나옵니다.</p>
+        <p><b>출제 범위</b> — 일차함수(함수값·기울기·대입·<b>좌표·그래프 읽기·절편</b>), 이차방정식(인수분해·전개·해 구하기). <i>이차함수의 그래프·꼭짓점은 출제되지 않습니다.</i></p>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script>
+/* =========================================================
+   수학 문제 생성 엔진
+   ========================================================= */
+(function(global){
+  const R = (a,b)=> a + Math.floor(Math.random()*(b-a+1));
+  const Rn0 = (a,b)=>{ let v; do{v=R(a,b);}while(v===0); return v; };
+  const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+  const shuffle = arr => { const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+
+  function lin(a,b){
+    if(a===0){ return b===0 ? '0' : String(b); }
+    let s = a===1?'x': a===-1?'-x': a+'x';
+    if(b>0) s+=' + '+b; else if(b<0) s+=' - '+(-b);
+    return s;
+  }
+  const signCoefX = p => p===0?'' : (p>0?' + ':' - ') + (Math.abs(p)===1?'':Math.abs(p)) + 'x';
+  const signConst = q => q===0?'' : (q>0?' + ':' - ') + Math.abs(q);
+  const trino = (p,q)=> 'x²' + signCoefX(p) + signConst(q);
+  const parenC = c => c>0 ? `(x + ${c})` : `(x - ${-c})`;
+  function rootsLabel(rs){
+    const a=Math.min(...rs), b=Math.max(...rs);
+    if(a===b) return `x = ${a} (중근)`;
+    return `x = ${a} 또는 x = ${b}`;
+  }
+  const norm = s => String(s).trim().replace(/\s+/g,'').replace(/[−–—]/g,'-').replace(/^x=/,'').toLowerCase();
+
+  // 보기의 '값'을 기준으로 한 정규화 키 — 표기만 다른 동일 답을 같은 것으로 본다.
+  function canonKey(s){
+    let t=String(s).replace(/<[^>]+>/g,'').replace(/\s+/g,'').replace(/[−–—]/g,'-').toLowerCase();
+    // 인수분해 꼴: (x±a)(x±b) → 인수들을 정렬 ( (x-1)(x-2)==(x-2)(x-1) )
+    const fac=[...t.matchAll(/\(x([+\-]\d+)\)/g)].map(m=>m[1]);
+    if(fac.length>=2){ const lead=t.split('(')[0]; return 'FAC:'+lead+':'+fac.slice().sort().join('|'); }
+    // 해 표기: x=A 또는 x=B → 근을 정렬
+    const roots=[...t.matchAll(/x=(-?\d+)/g)].map(m=>+m[1]);
+    if(roots.length){ roots.sort((a,b)=>a-b); return 'ROOT:'+roots.join(','); }
+    return t;
+  }
+  // correct + distractors 에서 값이 겹치지 않는 보기 4개를 만든다. extra는 부족할 때 채울 추가 후보 생성기(선택).
+  function mc(correct, distractors, extra){
+    const seen=new Set([canonKey(correct)]);
+    const uniq=[];
+    for(const d of (distractors||[])){ const k=canonKey(d); if(!seen.has(k)){ seen.add(k); uniq.push(d); } if(uniq.length>=3) break; }
+    let guard=0;
+    while(uniq.length<3 && extra && guard<200){ guard++; const d=extra(); if(d==null) break; const k=canonKey(d); if(!seen.has(k)){ seen.add(k); uniq.push(d); } }
+    // 그래도 부족하면(이론상 드묾) 마지막 안전장치: 의미 있는 더미 추가
+    guard=0;
+    while(uniq.length<3 && guard<200){ guard++; const n=R(-12,12); const d='x = '+n; const k=canonKey(d); if(!seen.has(k)){ seen.add(k); uniq.push(d); } }
+    const all = shuffle([correct, ...uniq.slice(0,3)]);
+    return { choices: all, answerIndex: all.indexOf(correct) };
+  }
+  function rootMC(rs){
+    const correct = rootsLabel(rs);
+    const cand = [
+      rootsLabel(rs.map(x=>-x)),
+      rootsLabel(rs.map(x=>x+1)),
+      rootsLabel(rs.map(x=>x-1)),
+      rootsLabel(rs.map(x=>x+2)),
+      rs.length>1?rootsLabel([rs[0]+1, rs[1]-1]):rootsLabel([rs[0]+2]),
+      rs.length>1?rootsLabel([-rs[0], rs[1]]):rootsLabel([-rs[0]-1]),
+    ];
+    const extra=()=>{ const a=R(-9,9), b=R(-9,9); return rootsLabel(a===b?[a,b+1]:[a,b]); };
+    return mc(correct, cand, extra);
+  }
+
+  const GEN = [];
+  const G = (id, area, diff, time, type, fn)=> GEN.push({id, area, diff, time, type, fn});
+
+  G('linval','일차함수 함수값',1,25,'short',()=>{
+    const a=Rn0(-4,4), b=R(-9,9), k=R(-3,4), ans=a*k+b;
+    return {
+      q:`일차함수 f(x) = ${lin(a,b)} 에서<br><span class="mono">f(${k})</span> 의 값을 구하시오.`,
+      accept:[String(ans)],
+      explain:`f(${k}) = (${a})×(${k}) ${b>=0?'+ '+b:'- '+(-b)} = ${ans}`,
+    };
+  });
+  G('linsolve','일차방정식 풀이',1,30,'short',()=>{
+    const x0=R(-6,6), a=R(2,5), c=R(-9,9), b=c-a*x0;
+    return {
+      q:`방정식 <span class="mono">${a}x${signConst(b)} = ${c}</span><br>의 해 x 를 구하시오.`,
+      accept:[String(x0)],
+      explain:`${a}x = ${c}${b>=0?' - '+b:' + '+(-b)} = ${c-b}, 따라서 x = ${x0}`,
+    };
+  });
+  G('lineq2','일차방정식(괄호)',1,35,'short',()=>{
+    const x0=R(-5,5), a=R(2,4), m=Rn0(-6,6), val=a*(x0+m);
+    return {
+      q:`방정식 <span class="mono">${a}(x${signConst(m)}) = ${val}</span><br>의 해를 구하시오.`,
+      accept:[String(x0)],
+      explain:`양변을 ${a} 로 나누면 x${signConst(m)} = ${val/a}, 따라서 x = ${x0}`,
+    };
+  });
+  G('quadval','식의 값(대입)',1,30,'short',()=>{
+    const b=R(-5,5), c=R(-6,6), k=R(-3,3), ans=k*k+b*k+c;
+    return {
+      q:`식 <span class="mono">x²${signCoefX(b)}${signConst(c)}</span> 에<br>x = ${k} 를 대입한 값을 구하시오.`,
+      accept:[String(ans)],
+      explain:`(${k})² ${b>=0?'+ '+b:'- '+(-b)}×(${k}) ${c>=0?'+ '+c:'- '+(-c)} = ${ans}`,
+    };
+  });
+  G('zerop','이차방정식(인수곱=0)',1,30,'mc',()=>{
+    let a=R(-6,6), b=R(-6,6); if(a===b) b = a+ (a<6?1:-1);
+    const opt = rootMC([a,b]);
+    return {
+      q:`방정식 <span class="mono">${parenC(-a)}${parenC(-b)} = 0</span><br>의 해를 모두 고르시오.`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`두 인수 중 하나가 0이면 되므로 x = ${a} 또는 x = ${b}`,
+    };
+  });
+  G('sqrt','제곱근 형태 방정식',1,30,'mc',()=>{
+    const m=R(2,9), n=m*m;
+    const opt = rootMC([-m,m]);
+    return {
+      q:`방정식 <span class="mono">x² = ${n}</span> 의 해를 모두 고르시오.`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`x² = ${n} 이므로 x = ±${m}`,
+    };
+  });
+  G('pt','일차함수 위의 점',2,40,'mc',()=>{
+    const a=Rn0(-3,3), b=R(-6,6), k=R(-3,3), y=a*k+b;
+    const correct=`(${k}, ${y})`;
+    const ds=[`(${k}, ${y+1})`,`(${k+1}, ${y})`,`(${-k||1}, ${a*(-k||1)+b+2})`,`(${k}, ${y-2})`,`(${k+2}, ${y})`,`(${k}, ${y+3})`];
+    const opt = mc(correct, ds, ()=>`(${k+R(-3,3)}, ${y+Rn0(-4,4)})`);
+    return {
+      q:`일차함수 <span class="mono">y = ${lin(a,b)}</span> 의<br>그래프 위에 있는 점을 고르시오.`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`x = ${k} 를 대입하면 y = ${y}`,
+    };
+  });
+  G('findb','y절편 b 구하기',2,40,'short',()=>{
+    const a=Rn0(-4,4), p=R(-5,5), q=R(-9,9), b=q-a*p;
+    const ax = a===1?'x': a===-1?'-x': a+'x';
+    return {
+      q:`기울기가 ${a} 인 일차함수 <span class="mono">y = ${ax} + b</span> 의<br>그래프가 점 (${p}, ${q}) 를 지난다. b 의 값은?`,
+      accept:[String(b)],
+      explain:`${q} = (${a})×(${p}) + b, 따라서 b = ${b}`,
+    };
+  });
+  G('slope','직선의 기울기',2,45,'short',()=>{
+    let x1=R(-4,4), x2=R(-4,4); if(x1===x2) x2=x1+1;
+    const s=Rn0(-3,3), y1=R(-6,6), y2=y1+s*(x2-x1);
+    return {
+      q:`두 점 <span class="mono">(${x1}, ${y1}), (${x2}, ${y2})</span> 를<br>지나는 직선의 기울기를 구하시오.`,
+      accept:[String(s)],
+      explain:`(y증가량)/(x증가량) = ${s}`,
+    };
+  });
+  G('sq','완전제곱식 전개',2,40,'mc',()=>{
+    const a=Rn0(-6,6);
+    const correct=trino(2*a, a*a);
+    const ds=[trino(a, a*a), trino(2*a, -a*a), trino(a*a, 2*a), trino(2*a, 2*a), trino(-2*a, a*a), trino(2*a, a*a+1)];
+    const opt=mc(correct, ds, ()=>trino(2*a+Rn0(-3,3), a*a+R(-3,3)));
+    return {
+      q:`<span class="mono">(x${signConst(a)})²</span> 을 전개하면?`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`= ${correct}`,
+    };
+  });
+  G('prod','곱셈공식 전개',2,45,'mc',()=>{
+    const a=Rn0(-6,6); let b=Rn0(-6,6);
+    const correct=trino(a+b, a*b);
+    const ds=[trino(a*b, a+b), trino(a+b, -a*b), trino(a+b+1, a*b), trino(a-b, a*b), trino(a+b, a*b+1), trino(-(a+b), a*b)];
+    const opt=mc(correct, ds, ()=>trino(a+b+Rn0(-3,3), a*b+R(-3,3)));
+    return {
+      q:`<span class="mono">${parenC(a)}${parenC(b)}</span> 을 전개하면?`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`= ${correct}`,
+    };
+  });
+  G('common','공통인수 인수분해',2,40,'mc',()=>{
+    const A=R(2,6), B=Rn0(-9,9);
+    const inner = (A===1?'x':A+'x') + signConst(B);
+    const correct=`x(${inner})`;
+    const ds=[`x(${A}x${signConst(-B)})`, `${A}x(x${signConst(B)})`, `${A}x(x${signConst(Math.round(B/2)||1)})`, `x(${A}x${signConst(B+1)})`, `x(${A+1}x${signConst(B)})`];
+    const opt=mc(correct, ds, ()=>`x(${A}x${signConst(B+Rn0(-3,3))})`);
+    return {
+      q:`<span class="mono">${A}x²${signCoefX(B)}</span> 를 인수분해하면?`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`공통인수 x 로 묶음`,
+    };
+  });
+  G('factor','이차식 인수분해',2,50,'mc',()=>{
+    const a=Rn0(-7,7); let b=Rn0(-7,7);
+    const p=a+b, q=a*b;
+    const correct=`${parenC(a)}${parenC(b)}`;
+    const ds=[`${parenC(-a)}${parenC(b)}`, `${parenC(a)}${parenC(-b)}`, `${parenC(a+1)}${parenC(b)}`, `${parenC(a)}${parenC(b-1)}`, `${parenC(-a)}${parenC(-b)}`, `${parenC(a-1)}${parenC(b)}`];
+    const opt=mc(correct, ds, ()=>`${parenC(a+Rn0(-2,2))}${parenC(b+Rn0(-2,2))}`);
+    return {
+      q:`<span class="mono">${trino(p,q)}</span> 을 인수분해하면?`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`합 ${p}, 곱 ${q} → ${a}, ${b}`,
+    };
+  });
+  G('diff','합·차 공식 인수분해',2,45,'mc',()=>{
+    const a=R(2,9), n=a*a;
+    const correct=`(x + ${a})(x - ${a})`;
+    const ds=[`(x + ${a})²`, `(x - ${a})²`, `(x + ${a})(x - ${a+1})`, `(x + ${a+1})(x - ${a})`, `(x + ${a-1})(x - ${a-1})`];
+    const opt=mc(correct, ds, ()=>`(x + ${a})(x - ${a+R(1,3)})`);
+    return {
+      q:`<span class="mono">x² - ${n}</span> 을 인수분해하면?`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`x² - ${a}² = (x+${a})(x-${a})`,
+    };
+  });
+  G('solveq','이차방정식(인수분해 풀이)',2,50,'mc',()=>{
+    let r1=R(-6,6), r2=R(-6,6); if(r1===r2) r2=r1+(r1<6?1:-1);
+    const p=-(r1+r2), q=r1*r2;
+    const opt=rootMC([r1,r2]);
+    return {
+      q:`이차방정식 <span class="mono">${trino(p,q)} = 0</span><br>의 해를 모두 고르시오.`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`x = ${r1} 또는 x = ${r2}`,
+    };
+  });
+  G('b_solve','【보스】이차방정식 정복',3,60,'mc',()=>{
+    let r1=R(-9,9), r2=R(-9,9); if(r1===r2) r2=r1+(r1<9?1:-1);
+    const p=-(r1+r2), q=r1*r2;
+    const opt=rootMC([r1,r2]);
+    return {
+      q:`💀 보스 봉인 해제!<br>이차방정식 <span class="mono">${trino(p,q)} = 0</span> 의 해를 모두 고르시오.`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`x = ${r1} 또는 x = ${r2}`,
+    };
+  });
+  G('b_coef','【보스】계수 간파',3,60,'short',()=>{
+    const a=Rn0(-7,7), b=Rn0(-7,7);
+    const p=a+b;
+    return {
+      q:`💀 보스의 수수께끼!<br><span class="mono">${parenC(a)}${parenC(b)}</span> 를 전개했을 때<br><b>x 의 계수</b>를 구하시오.`,
+      accept:[String(p)],
+      explain:`x의 계수 = ${a} + ${b} = ${p}`,
+    };
+  });
+  G('b_slopef','【보스】숨은 기울기',3,60,'short',()=>{
+    let p=R(-5,5), r=R(-5,5); if(p===r) r=p+1;
+    const a=Rn0(-3,3), b=R(-6,6);
+    const q=a*p+b, s=a*r+b;
+    return {
+      q:`💀 보스의 함정!<br>일차함수 f(x)=ax+b 에서<br><span class="mono">f(${p}) = ${q}, f(${r}) = ${s}</span><br>일 때 a 의 값을 구하시오.`,
+      accept:[String(a)],
+      explain:`a = (${s} - ${q}) / (${r} - ${p}) = ${a}`,
+    };
+  });
+
+  /* ---------- 좌표 · 일차함수 그래프 (이차함수 그래프는 제외) ---------- */
+  // 작은 좌표평면 SVG. pts: [{x,y,c}], line: {a,b} (y=ax+b) 를 그린다.
+  function grid(opts){
+    const S=18, O=90, R0=4; // 칸 크기, 원점 픽셀, 점 반지름
+    const X=v=>O+v*S, Y=v=>O-v*S;
+    let g='';
+    for(let i=-4;i<=4;i++){ g+=`<line x1="${X(i)}" y1="${Y(-4)}" x2="${X(i)}" y2="${Y(4)}" stroke="#2a2350" stroke-width="1"/>`;
+      g+=`<line x1="${X(-4)}" y1="${Y(i)}" x2="${X(4)}" y2="${Y(i)}" stroke="#2a2350" stroke-width="1"/>`; }
+    g+=`<line x1="${X(-4)}" y1="${Y(0)}" x2="${X(4)}" y2="${Y(0)}" stroke="#7a6fc0" stroke-width="1.6"/>`;
+    g+=`<line x1="${X(0)}" y1="${Y(-4)}" x2="${X(0)}" y2="${Y(4)}" stroke="#7a6fc0" stroke-width="1.6"/>`;
+    g+=`<text x="${X(4)-2}" y="${Y(0)+14}" fill="#9b91d8" font-size="10">x</text>`;
+    g+=`<text x="${X(0)+5}" y="${Y(4)+9}" fill="#9b91d8" font-size="10">y</text>`;
+    if(opts&&opts.line){ const {a,b}=opts.line; const x1=-4,x2=4,y1=a*x1+b,y2=a*x2+b;
+      g+=`<line x1="${X(x1)}" y1="${Y(y1)}" x2="${X(x2)}" y2="${Y(y2)}" stroke="#3ef08a" stroke-width="2.4"/>`; }
+    if(opts&&opts.pts) for(const p of opts.pts){
+      g+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${R0}" fill="${p.c||'#ffcf4d'}" stroke="#000" stroke-width="1"/>`;
+      if(p.label) g+=`<text x="${X(p.x)+7}" y="${Y(p.y)-6}" fill="#ffe9a8" font-size="11" font-weight="700">${p.label}</text>`;
+    }
+    return `<svg viewBox="0 0 180 180" width="180" height="180" style="display:block;margin:6px auto;background:#0d0a1c;border:2px solid #000;border-radius:10px">${g}</svg>`;
+  }
+
+  // [1] 그래프에서 점의 좌표 읽기
+  G('readpt','좌표 읽기',1,30,'mc',()=>{
+    const x=Rn0(-4,4), y=Rn0(-4,4);
+    const correct=`(${x}, ${y})`;
+    const ds=[`(${y}, ${x})`,`(${-x}, ${y})`,`(${x}, ${-y})`,`(${x+1}, ${y})`,`(${x}, ${y-1})`];
+    const opt=mc(correct, ds, ()=>`(${x+Rn0(-2,2)}, ${y+Rn0(-2,2)})`);
+    return {
+      q:`아래 좌표평면에서 점 P 의 좌표를 고르시오.${grid({pts:[{x,y,label:'P',c:'#ff5470'}]})}`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`P 는 x축으로 ${x}, y축으로 ${y} 만큼 → (${x}, ${y})`,
+    };
+  });
+
+  // [2] 점이 어느 사분면에 있는가
+  G('quad','사분면 찾기',1,30,'mc',()=>{
+    const x=Rn0(-4,4), y=Rn0(-4,4);
+    const Q = x>0&&y>0?'제1사분면': x<0&&y>0?'제2사분면': x<0&&y<0?'제3사분면':'제4사분면';
+    const opt=mc(Q, ['제1사분면','제2사분면','제3사분면','제4사분면'].filter(z=>z!==Q));
+    return {
+      q:`점 <span class="mono">(${x}, ${y})</span> 는 어느 사분면에 있는가?${grid({pts:[{x,y,label:'',c:'#5af7ff'}]})}`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`x${x>0?'>':'<'}0, y${y>0?'>':'<'}0 이므로 ${Q}`,
+    };
+  });
+
+  // [3] 그래프(직선)의 기울기 읽기
+  G('gslope','그래프의 기울기',2,40,'mc',()=>{
+    const a=Rn0(-3,3), b=R(-2,2);
+    const correct=String(a);
+    const ds=[String(-a),String(a+1),String(a-1),String(b||1)];
+    const opt=mc(correct, ds, ()=>String(a+Rn0(-3,3)));
+    return {
+      q:`아래 직선의 <b>기울기</b>를 고르시오.${grid({line:{a,b}})}`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`x가 1 늘 때 y는 ${a} 만큼 변하므로 기울기는 ${a}`,
+    };
+  });
+
+  // [4] 그래프에서 y절편 읽기
+  G('gyint','그래프의 y절편',2,40,'mc',()=>{
+    let a=Rn0(-2,2), b=Rn0(-3,3);
+    const correct=String(b);
+    const ds=[String(-b),String(b+1),String(b-1),String(a)];
+    const opt=mc(correct, ds, ()=>String(b+Rn0(-3,3)));
+    return {
+      q:`아래 직선이 y축과 만나는 점의 y좌표(<b>y절편</b>)를 고르시오.${grid({line:{a,b},pts:[{x:0,y:b,c:'#ffcf4d'}]})}`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`그래프가 y축과 (0, ${b}) 에서 만나므로 y절편은 ${b}`,
+    };
+  });
+
+  // [5] x절편 구하기 (y=0)
+  G('xint','x절편 구하기',2,45,'short',()=>{
+    const a=Rn0(-3,3); let x0=Rn0(-4,4); const b=-a*x0; // ax+b=0 → x=x0
+    return {
+      q:`일차함수 <span class="mono">y = ${lin(a,b)}</span> 의 그래프가<br>x축과 만나는 점의 x좌표(<b>x절편</b>)를 구하시오.`,
+      accept:[String(x0)],
+      explain:`y=0 일 때 ${lin(a,b)}=0 → x = ${x0}`,
+    };
+  });
+
+  // [6] 두 점을 보고 직선의 식 (보스)
+  G('b_line','【보스】직선의 식',3,60,'mc',()=>{
+    let x1=Rn0(-3,3), x2=Rn0(-3,3); if(x1===x2)x2=x1+1;
+    const a=Rn0(-3,3), b=R(-3,3); const y1=a*x1+b, y2=a*x2+b;
+    const correct=`y = ${lin(a,b)}`;
+    const ds=[`y = ${lin(-a,b)}`,`y = ${lin(a,-b||1)}`,`y = ${lin(a+1,b)}`,`y = ${lin(a,b+1)}`];
+    const opt=mc(correct, ds, ()=>`y = ${lin(a+Rn0(-2,2), b+R(-2,2))}`);
+    return {
+      q:`💀 보스의 좌표 봉인!<br>두 점 <span class="mono">(${x1}, ${y1}), (${x2}, ${y2})</span> 를 지나는 직선의 식을 고르시오.${grid({pts:[{x:x1,y:y1,c:'#ff5470'},{x:x2,y:y2,c:'#ff5470'}],line:{a,b}})}`,
+      choices:opt.choices, answerIndex:opt.answerIndex,
+      explain:`기울기 a = ${a}, y절편 b = ${b} → y = ${lin(a,b)}`,
+    };
+  });
+
+  function generate(diff, used){
+    const pool = GEN.filter(g=>g.diff===diff);
+    for(let tries=0; tries<40; tries++){
+      const g = pick(pool);
+      const p = g.fn();
+      const key = g.id + '::' + (p.q);
+      if(used && used.has(key)) continue;
+      if(used) used.add(key);
+      p.id=g.id; p.area=g.area; p.diff=diff; p.time=g.time;
+      p.type = p.choices ? 'mc' : 'short';
+      return p;
+    }
+    const g=pick(pool), p=g.fn();
+    p.id=g.id; p.area=g.area; p.diff=diff; p.time=g.time; p.type=p.choices?'mc':'short';
+    return p;
+  }
+  global.MathGen = { generate, norm, GEN };
+})(typeof window!=='undefined'?window:globalThis);
+
+/* =========================================================
+   저장소
+   ========================================================= */
+const Store = (()=>{
+  let mem = {}; let usable=true;
+  try{ const k='__t'+Math.random(); localStorage.setItem(k,'1'); localStorage.removeItem(k); }
+  catch(e){ usable=false; }
+  const get = (k,def)=>{ try{ if(!usable){return k in mem?mem[k]:def;} const v=localStorage.getItem(k); return v===null?def:JSON.parse(v);}catch(e){return def;} };
+  const set = (k,v)=>{ try{ if(!usable){mem[k]=v;return;} localStorage.setItem(k,JSON.stringify(v)); }catch(e){ mem[k]=v; } };
+  const del = (k)=>{ try{ if(!usable){delete mem[k];return;} localStorage.removeItem(k);}catch(e){delete mem[k];} };
+  return {get,set,del, persistent:usable};
+})();
+const DB = {
+  leaderKey:'fh_leader', logKey:'fh_log', dexKey:'fh_dex', saveKey:'fh_save',
+  leader(){ return Store.get(this.leaderKey, []); },
+  pushLeader(rec){ const a=this.leader(); a.push(rec); a.sort((x,y)=>y.score-x.score); Store.set(this.leaderKey, a.slice(0,500)); return a; },
+  log(){ return Store.get(this.logKey, []); },
+  pushLog(rows){ const a=this.log(); for(const r of rows) a.push(r); Store.set(this.logKey, a.slice(-5000)); },
+  dex(){ return Store.get(this.dexKey, {monster:{},boss:{},item:{}}); },
+  saveDex(d){ Store.set(this.dexKey, d); },
+  save(){ return Store.get(this.saveKey, null); },
+  setSave(s){ Store.set(this.saveKey, s); },
+  clearSave(){ Store.del(this.saveKey); },
+  wipe(){ Store.del(this.leaderKey); Store.del(this.logKey); }
+};
+
+/* =========================================================
+   공유 명예의 전당 (Google Apps Script 연동)
+   ───────────────────────────────────────────────────────
+   ★ 배포 전: 아래 CLOUD_URL 에 본인의 Apps Script '웹 앱' 주소를 붙여넣으세요.
+     비워두면 기존처럼 이 기기에만 저장됩니다(로컬 모드).
+     설정 방법은 함께 드린 안내문(가이드)을 참고하세요.
+   ========================================================= */
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbz6caD9UJXO4tvJSMX4U4GR5mFEcXAoZPslg0pai6xWi75ZJC4LPE7UHFLGzdImp6HnhA/exec"; // 예: "https://script.google.com/macros/s/AKfy.../exec"
+const Cloud = {
+  get enabled(){ return typeof CLOUD_URL==='string' && /^https:\/\/script\.google\.com\/macros\/s\//.test(CLOUD_URL); },
+  // 점수 기록 + 문항 응답 로그 전송 (실패해도 게임 진행에 영향 없음)
+  async submit(rec, qLog){
+    if(!this.enabled) return false;
+    const payload = JSON.stringify({type:'submit', rec, log:qLog||[]});
+    // Apps Script 는 CORS 응답 헤더를 주지 않으므로, 쓰기는 no-cors 로 보낸다.
+    // (응답 본문은 못 읽지만 전송은 확실히 이뤄진다. keepalive 로 화면 전환에도 살아남음)
+    try{
+      await fetch(CLOUD_URL, { method:'POST', mode:'no-cors', keepalive:true,
+        headers:{'Content-Type':'text/plain;charset=utf-8'}, body: payload });
+      return true;
+    }catch(e){ return false; }
+  },
+  // 전체 랭킹 + 응답 로그 가져오기 → {leader:[...], log:[...]}
+  async fetchAll(){
+    if(!this.enabled) return null;
+    try{
+      const res = await fetch(CLOUD_URL + (CLOUD_URL.includes('?')?'&':'?') + 'action=all&t=' + Date.now());
+      if(!res.ok) return null;
+      const data = await res.json();
+      return { leader: Array.isArray(data.leader)?data.leader:[], log: Array.isArray(data.log)?data.log:[] };
+    }catch(e){ return null; }
+  }
+};
+// 로컬 + 클라우드 기록을 합치고 중복(ts+name 기준) 제거 후 점수순 정렬
+function mergeBoards(a,b){
+  const seen=new Set(), out=[];
+  for(const r of [...(a||[]), ...(b||[])]){
+    if(!r) continue;
+    const k = (r.ts||'')+'|'+(r.name||'')+'|'+(r.score||0);
+    if(seen.has(k)) continue; seen.add(k); out.push(r);
+  }
+  out.sort((x,y)=>(y.score||0)-(x.score||0));
+  return out;
+}
+function mergeLogs(a,b){
+  const seen=new Set(), out=[];
+  for(const r of [...(a||[]), ...(b||[])]){
+    if(!r) continue;
+    const k=[r.ts,r.name,r.id,r.correct].join('|');
+    if(seen.has(k)) continue; seen.add(k); out.push(r);
+  }
+  return out;
+}
+
+/* =========================================================
+   몬스터/보스/아이템/영웅
+   ========================================================= */
+const MONSTERS = [
+  {id:'slime', name:'미지수 슬라임', em:'🟢', color:'#5fe07a', hp:14, spd:.55, dmg:6, xp:4, r:14,
+    story:'정체를 알 수 없는 x. 가장 흔하지만 방심하면 떼로 몰려온다.'},
+  {id:'bat', name:'음수 박쥐', em:'🦇', color:'#9b7bff', hp:10, spd:1.0, dmg:5, xp:5, r:12,
+    story:'부호를 바꾸며 빠르게 날아든다. 빠른 만큼 약하다.'},
+  {id:'cube', name:'상수 큐브', em:'🟦', color:'#5ab7ff', hp:24, spd:.45, dmg:9, xp:7, r:15,
+    story:'움직이지 않을 것 같지만 우직하게 다가오는 단단한 상수항.'},
+  {id:'spider', name:'근(根) 거미', em:'🕷️', color:'#ff7a8a', hp:18, spd:.8, dmg:8, xp:6, r:13,
+    story:'방정식의 해를 노린다. 두 마리가 짝지어 나타나곤 한다.'},
+  {id:'ghost', name:'괄호 유령', em:'👻', color:'#cfe', hp:16, spd:.7, dmg:7, xp:6, r:13,
+    story:'전개되기 전까지 실체를 숨긴다. 흐물거리며 추적한다.'},
+  {id:'wisp', name:'기울기 도깨비불', em:'🔥', color:'#ffb14d', hp:12, spd:1.15, dmg:6, xp:6, r:11,
+    story:'일정한 비율로 가속한다. 직선처럼 곧장 달려온다.'},
+  {id:'golem', name:'계수 골렘', em:'🗿', color:'#b0a3c8', hp:40, spd:.4, dmg:13, xp:11, r:18,
+    story:'커다란 계수를 짊어진 골렘. 느리지만 한 방이 묵직하다.'},
+  {id:'eye', name:'판별식의 눈', em:'👁️', color:'#7af7ff', hp:22, spd:.65, dmg:9, xp:9, r:13,
+    story:'해가 있는지 없는지를 꿰뚫어 본다.'},
+  {id:'snake', name:'곱셈공식 뱀', em:'🐍', color:'#39f4a8', hp:28, spd:.85, dmg:10, xp:10, r:14,
+    story:'(a+b)처럼 길게 늘어나 휘감는다.'},
+  {id:'knight', name:'인수분해 기사', em:'⚔️', color:'#e0c070', hp:46, spd:.6, dmg:14, xp:14, r:16,
+    story:'식을 두 인수로 가르는 검을 든 정예.'},
+  {id:'reaper', name:'무리수 사신', em:'☠️', color:'#c46bff', hp:60, spd:.7, dmg:18, xp:20, r:17, rare:true,
+    story:'끝나지 않는 소수처럼 집요하다.'},
+  {id:'star', name:'황금비 별', em:'⭐', color:'#ffcf4d', hp:30, spd:.9, dmg:10, xp:30, r:13, rare:true,
+    story:'1.618… 처치하면 경험치를 듬뿍 준다.'},
+];
+const BOSSES = [
+  {id:'b_quad', name:'이차식의 군주 콰드라', em:'👹', color:'#ff5470', hp:420, spd:.42, dmg:22, xp:120, r:34,
+    story:'x²의 힘을 다스리는 군주.'},
+  {id:'b_factor', name:'인수분해의 폭군 팩토', em:'🦂', color:'#ff8c3d', hp:560, spd:.5, dmg:26, xp:160, r:36,
+    story:'모든 식을 강제로 쪼개버리는 폭군.'},
+  {id:'b_root', name:'심연의 근원 루티카', em:'🐙', color:'#7af7ff', hp:700, spd:.46, dmg:30, xp:200, r:40,
+    story:'방정식의 모든 해가 모이는 심연의 주인.'},
+  {id:'b_slope', name:'질주하는 기울기 슬로페', em:'🐉', color:'#39f4a8', hp:640, spd:.7, dmg:28, xp:190, r:34,
+    story:'일정한 기울기로 가속하는 용.'},
+  {id:'b_disc', name:'판별의 마왕 디스카', em:'😈', color:'#c46bff', hp:820, spd:.5, dmg:34, xp:240, r:42,
+    story:'해의 존재를 판가름하는 마왕.'},
+  {id:'b_expand', name:'전개의 거신 익스판', em:'🤖', color:'#5ab7ff', hp:900, spd:.45, dmg:36, xp:260, r:44,
+    story:'괄호를 풀어 헤치는 거신.'},
+  {id:'b_const', name:'영원한 상수 콘스탄', em:'🛡️', color:'#b0a3c8', hp:980, spd:.4, dmg:38, xp:280, r:46,
+    story:'변하지 않는 자.'},
+  {id:'b_func', name:'함수의 지배자 펑크', em:'🎭', color:'#ffcf4d', hp:1100, spd:.55, dmg:40, xp:320, r:46,
+    story:'입력을 출력으로 바꾸는 지배자.'},
+  {id:'b_poly', name:'다항의 패왕 폴리', em:'🐲', color:'#ff5a8a', hp:1300, spd:.5, dmg:44, xp:380, r:50,
+    story:'여러 항을 거느린 패왕.'},
+  {id:'b_final', name:'이차함수의 전조 파라보', em:'🌟', color:'#39f4a8', hp:1600, spd:.5, dmg:48, xp:500, r:54, rare:true,
+    story:'다음 단원의 전조.'},
+];
+const ITEMS = [
+  {id:'atk', name:'예리한 미지수', em:'🗡️', tier:'normal', desc:'공격력 +18%', apply:p=>p.atk*=1.18,
+    story:'x를 갈아 만든 칼날.'},
+  {id:'hp', name:'상수 방패', em:'🛡️', tier:'normal', desc:'최대 체력 +25', apply:p=>{p.maxHp+=25;p.hp+=25;},
+    story:'변하지 않는 상수의 안정감.'},
+  {id:'spd', name:'기울기 부츠', em:'👟', tier:'normal', desc:'이동속도 +12%', apply:p=>p.moveSpeed*=1.12,
+    story:'경사를 미끄러지듯 달리는 신발.'},
+  {id:'as', name:'곱셈공식 장갑', em:'🧤', tier:'normal', desc:'공격속도 +15%', apply:p=>p.atkCd*=0.85,
+    story:'빠르게 전개하여 연사 속도를 높인다.'},
+  {id:'rng', name:'정의역 렌즈', em:'🔭', tier:'normal', desc:'사정거리 +20%', apply:p=>p.range*=1.2,
+    story:'더 넓은 정의역을 살피는 렌즈.'},
+  {id:'magnet_s', name:'작은 자석', em:'🧲', tier:'normal', desc:'경험치 자석 범위 +40%, 흡인력 +15%', apply:p=>{p.magnet*=1.4; p.magnetPull*=1.15;},
+    story:'아이템을 끌어당기는 작은 자석.'},
+  {id:'regen', name:'해의 물약', em:'🧪', tier:'rare', desc:'초당 체력 회복 +1.2', apply:p=>p.regen+=1.2,
+    story:'방정식의 해처럼 잃은 것을 되찾아 준다.'},
+  {id:'multi', name:'두 근의 화살', em:'🏹', tier:'rare', desc:'발사체 +1', apply:p=>p.shots+=1,
+    story:'근이 둘이듯, 화살도 둘.'},
+  {id:'pierce', name:'관통하는 인수', em:'➤', tier:'rare', desc:'관통 +1', apply:p=>p.pierce+=1,
+    story:'인수분해된 칼날이 적을 통과한다.'},
+  {id:'crit', name:'판별식의 눈동자', em:'👁️', tier:'rare', desc:'치명타 확률 +15%', apply:p=>p.crit+=0.15,
+    story:'약점을 간파해 두 배의 피해.'},
+  {id:'big', name:'완전제곱의 핵', em:'💥', tier:'epic', desc:'공격력 +35% & 탄 크기 +30%', apply:p=>{p.atk*=1.35;p.projR*=1.3;},
+    story:'(x+a)²처럼 완벽하게 응축된 파괴의 핵.'},
+  {id:'aura', name:'근의 공식 오라', em:'🌀', tier:'epic', desc:'주변 적에게 강력한 지속 피해 (범위·피해 증가)', apply:p=>{p.aura=Math.max(p.aura,1);p.auraDmg+=11;p.auraR+=28;},
+    story:'주위를 맴도는 신비한 공식의 힘.'},
+  {id:'magnet', name:'무한대의 자석', em:'🧲', tier:'epic', desc:'경험치 자석 범위 +120%, 흡인력 2배', apply:p=>{p.magnet*=2.2; p.magnetPull*=2.0;},
+    story:'멀리 있는 경험치까지 빨아들이는 자석.'},
+  {id:'vamp', name:'흡수하는 미지수', em:'🩸', tier:'epic', desc:'공격 시 체력 흡수', apply:p=>p.lifesteal+=0.06,
+    story:'적의 값을 흡수해 자신의 체력으로 바꾼다.'},
+  // ── 오답 시 주어지는 약한 보상(위로 아이템) ──
+  {id:'scrap_atk', name:'무딘 미지수 조각', em:'🪨', tier:'weak', desc:'공격력 +4% (약한 보상)', apply:p=>p.atk*=1.04,
+    story:'정답을 놓쳤다… 작은 조각이지만 없는 것보단 낫다.'},
+  {id:'scrap_hp', name:'금이 간 상수 조각', em:'🧱', tier:'weak', desc:'최대 체력 +6 (약한 보상)', apply:p=>{p.maxHp+=6;p.hp+=6;},
+    story:'깨진 방패 조각. 다음엔 꼭 맞혀 더 좋은 보상을 받자.'},
+  {id:'scrap_spd', name:'닳은 기울기 조각', em:'🥾', tier:'weak', desc:'이동속도 +3% (약한 보상)', apply:p=>p.moveSpeed*=1.03,
+    story:'살짝 닳은 부츠 밑창. 미미하지만 도움은 된다.'},
+];
+const HEROES = {
+  warrior:{name:'검사', em:'⚔️', maxHp:120, atk:11, atkCd:46, moveSpeed:2.6, range:150, shots:1, projSpeed:6.5, weapon:'sword', skin:{body:'#3ab87a',head:'#ffd9b4',cape:'#c43b3b'}},
+  mage:   {name:'마법사', em:'🔮', maxHp:88,  atk:15, atkCd:52, moveSpeed:2.5, range:190, shots:1, projSpeed:7.5, pierce:1, weapon:'staff', skin:{body:'#6a5acd',head:'#ffd9b4',cape:'#241b66'}},
+  ranger: {name:'궁수', em:'🏹', maxHp:96,  atk:8,  atkCd:30, moveSpeed:2.8, range:170, shots:2, projSpeed:8, weapon:'bow', skin:{body:'#4f7a3c',head:'#ffd9b4',cape:'#7a5a2c'}},
+  guardian:{name:'수호자', em:'🛡️', maxHp:170, atk:9,  atkCd:50, moveSpeed:2.4, range:140, shots:1, projSpeed:6, regen:0.6, weapon:'shield', skin:{body:'#5078a6',head:'#ffd9b4',cape:'#2a3550'}},
+};
+
+/* =========================================================
+   게임 본체
+   ========================================================= */
+const __CODE = "wjdtjdgns97!!";   // ★ 선생님 접속 코드 — 배포 전 원하는 코드로 바꾸세요 (화면에는 표시되지 않습니다)
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const dist2=(a,b)=>{const dx=a.x-b.x,dy=a.y-b.y;return dx*dx+dy*dy;};
+let W=0,H=0,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=cv.clientWidth; H=cv.clientHeight;
+  cv.width=W*DPR; cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize',()=>{ if($('screen-game').classList.contains('on')){ resize(); if(S) buildForest(); }});
+
+let S=null;
+const keys={};
+window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; });
+window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+
+// 숫자키 1~4 단축키: 퀴즈 보기 선택 / 강화 카드 선택
+window.addEventListener('keydown',e=>{
+  // 단답형 입력칸에 타이핑 중일 때는 숫자를 그대로 입력하도록 무시
+  if(document.activeElement && document.activeElement.id==='qInput') return;
+  const map={'1':0,'2':1,'3':2,'4':3};
+  if(!(e.key in map)) return;
+  const idx=map[e.key];
+  // 1) 강화/보상 카드가 떠 있으면 그것부터 선택
+  const lv=$('levelWrap');
+  if(lv && lv.classList.contains('on')){
+    const cards=$('lvCards').children;
+    if(cards[idx]){ e.preventDefault(); cards[idx].click(); }
+    return;
+  }
+  // 2) 퀴즈 객관식 보기 선택 (아직 풀지 않은 상태)
+  const qz=$('quizWrap');
+  if(qz && qz.classList.contains('on') && S && S.curQuiz && !S.curQuiz.resolved){
+    const btns=$('qChoices').children;
+    if($('qChoices').style.display!=='none' && btns[idx]){ e.preventDefault(); btns[idx].click(); }
+  }
+});
+
+let joy={active:false,vx:0,vy:0};
+(function(){
+  const stick=$('stick'), knob=stick.querySelector('.knob');
+  const isTouch = ('ontouchstart' in window);
+  if(isTouch) stick.style.display='block';
+  let cx=0,cy=0,id=null;
+  function start(e){ const t=e.changedTouches?e.changedTouches[0]:e; const r=stick.getBoundingClientRect();
+    cx=r.left+r.width/2; cy=r.top+r.height/2; joy.active=true; id=t.identifier; move(e); }
+  function move(e){ if(!joy.active)return; let t; if(e.changedTouches){for(const x of e.changedTouches)if(x.identifier===id)t=x;} else t=e; if(!t)return;
+    let dx=t.clientX-cx, dy=t.clientY-cy; const m=Math.hypot(dx,dy)||1; const max=46; const k=Math.min(m,max);
+    knob.style.left=(60+ dx/m*k)+'px'; knob.style.top=(60+ dy/m*k)+'px';
+    joy.vx=dx/m; joy.vy=dy/m; if(m<8){joy.vx=0;joy.vy=0;} e.preventDefault(); }
+  function end(e){ joy.active=false; joy.vx=0; joy.vy=0; knob.style.left='50%'; knob.style.top='50%'; }
+  stick.addEventListener('touchstart',start,{passive:false});
+  stick.addEventListener('touchmove',move,{passive:false});
+  stick.addEventListener('touchend',end);
+})();
+
+function freshPlayer(heroId){
+  const h=HEROES[heroId]||HEROES.warrior;
+  return {x:W/2,y:H/2,r:15,hero:heroId,em:h.em,
+    hp:h.maxHp,maxHp:h.maxHp,atk:h.atk,atkCd:h.atkCd,cd:0,
+    moveSpeed:h.moveSpeed,range:h.range,shots:h.shots||1,projSpeed:h.projSpeed,projR:6,
+    pierce:h.pierce||0,crit:0,regen:h.regen||0,lifesteal:0,
+    magnet:90, magnetPull:1.0,
+    aura:0,auraDmg:0,auraT:0,auraR:104,
+    level:1,xp:0,need:12,kills:0,hurtCd:0,
+    facing:1, walkT:0};
+}
+
+/* ===== 숲 배경 (장식 전용, 충돌 없음) ===== */
+function buildForest(){
+  // 매우 적은 수의 장식 요소만 — 몬스터 이동 방해 없음
+  S.decor = [];
+  const rng = mulberry32(12345);
+  // 작은 풀잎 (배경)
+  for(let i=0;i<40;i++){
+    S.decor.push({type:'grass', x:rng()*W, y:rng()*H, s:0.7+rng()*0.6, c:rng()<.5?'#2d5a30':'#3a7038'});
+  }
+  // 꽃 (배경)
+  for(let i=0;i<14;i++){
+    const colors=['#ff7aa8','#ffd24d','#fff6b3','#c46bff','#7af7ff'];
+    S.decor.push({type:'flower', x:30+rng()*(W-60), y:30+rng()*(H-60), c:colors[Math.floor(rng()*colors.length)]});
+  }
+  // 작은 나무 (충돌 없음, 시각 장식만)
+  for(let i=0;i<5;i++){
+    S.decor.push({type:'tree', x:60+rng()*(W-120), y:60+rng()*(H-120), s:0.55+rng()*0.3});
+  }
+}
+function mulberry32(seed){
+  let a=seed>>>0;
+  return function(){
+    a=(a+0x6D2B79F5)>>>0;
+    let t=a;
+    t=Math.imul(t^(t>>>15),t|1);
+    t^=t+Math.imul(t^(t>>>7),t|61);
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+
+function newGame(info){
+  showScreen('screen-game'); resize();
+  S={info, pl:freshPlayer(info.hero), enemies:[],projs:[],eprojs:[],orbs:[],parts:[],floats:[],
+     time:0,spawnT:1600,spawnInt:1900,bossT:18000,bossIdx:0,boss:null,
+     running:true,paused:false,score:0,quizCount:0,quizCorrect:0,qLog:[],
+     lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
+  buildForest();
+  unlockDex('monster','slime');
+  $('pauseWrap').classList.remove('on');
+  requestAnimationFrame(loop);
+}
+
+function loop(ts){
+  if(!S) return;
+  const dt=Math.min((ts-S.lastTs)/16.667,3); S.lastTs=ts;
+  if(S.running && !S.paused){ update(dt); }
+  render();
+  if(S) requestAnimationFrame(loop);
+}
+
+function spawnEnemy(){
+  const t=S.time/1000;
+  const avail=MONSTERS.filter(m=>{
+    const tier = m.hp>40?3 : m.hp>20?2 : 1;
+    if(m.rare) return t>40 && Math.random()<0.12;
+    return t > (tier-1)*25;
+  });
+  const m = avail.length?avail[Math.floor(Math.random()*avail.length)]:MONSTERS[0];
+  unlockDex('monster',m.id);
+  const side=Math.floor(Math.random()*4); let x,y;
+  if(side===0){x=Math.random()*W;y=-20;} else if(side===1){x=W+20;y=Math.random()*H;}
+  else if(side===2){x=Math.random()*W;y=H+20;} else {x=-20;y=Math.random()*H;}
+  // 체력: 중반(60초)부터 가파르게 상승. 90초 이후엔 더 강해짐.
+  const hpScale = 1 + t/80 + Math.max(0, (t-60)/45) + Math.max(0,(t-120)/60);
+  // 속도: 기본 빠르게 + 시간이 갈수록 더 빠르게(상한 높임)
+  const spdMul = 1.35 + Math.min(0.7, t/220);
+  const hp = Math.round(m.hp*hpScale);
+  const dmg = m.dmg + (t>90?Math.floor((t-90)/45):0);  // 후반엔 접촉 피해도 조금 증가
+  S.enemies.push({type:m,id:m.id,x,y,r:m.r,hp,maxHp:hp,spd:m.spd*spdMul,dmg,xp:m.xp,
+    color:m.color,em:m.em,rare:m.rare,boss:false,ang:0,walkT:Math.random()*100});
+}
+function spawnBoss(){
+  const b=BOSSES[S.bossIdx%BOSSES.length]; S.bossIdx++;
+  unlockDex('boss',b.id);
+  const e={type:b,id:b.id,x:W/2,y:-40,r:b.r,hp:b.hp,maxHp:b.hp,spd:b.spd*1.2,dmg:b.dmg,xp:b.xp,
+    color:b.color,em:b.em,boss:true,bossData:b,walkT:0};
+  S.enemies.push(e); S.boss=e;
+  toast('💀 보스 '+b.name+' 등장!');
+}
+
+function update(dt){
+  const pl=S.pl;
+  S.time += dt*16.667;
+
+  // 플레이어 이동
+  let mx=0,my=0;
+  if(keys['arrowleft']||keys['a'])mx-=1; if(keys['arrowright']||keys['d'])mx+=1;
+  if(keys['arrowup']||keys['w'])my-=1; if(keys['arrowdown']||keys['s'])my+=1;
+  if(joy.vx||joy.vy){ mx=joy.vx; my=joy.vy; }
+  if(mx||my){
+    const m=Math.hypot(mx,my)||1;
+    pl.x+=mx/m*pl.moveSpeed*dt; pl.y+=my/m*pl.moveSpeed*dt;
+    pl.facing = mx>0?1: mx<0?-1:pl.facing;
+    pl.walkT += dt;
+  }
+  pl.x=clamp(pl.x,pl.r,W-pl.r); pl.y=clamp(pl.y,pl.r,H-pl.r);
+
+  if(pl.regen>0 && pl.hp<pl.maxHp) pl.hp=Math.min(pl.maxHp,pl.hp+pl.regen*dt/60);
+  if(pl.hurtCd>0) pl.hurtCd-=dt;
+
+  S.spawnT-=dt*16.667;
+  if(S.spawnT<=0 && !S.boss){   // 보스가 살아있는 동안에는 잡몹이 나오지 않음
+    const cap = 30;  // 동시 등장 상한 (렉 방지) — 보스 제외
+    const alive = S.enemies.reduce((c,e)=>c+(e.boss?0:1),0);
+    if(alive < cap){
+      const n=1+Math.floor(S.time/60000); // 등장 수 증가를 더 천천히
+      for(let i=0;i<n && (alive+i)<cap;i++) spawnEnemy();
+    }
+    S.spawnT=Math.max(560,S.spawnInt-S.time/170);
+  }
+  S.bossT-=dt*16.667;
+  if(S.bossT<=0 && !S.boss){ spawnBoss(); S.bossT=42000; }
+
+  // 자동 공격
+  pl.cd-=dt;
+  if(pl.cd<=0){
+    let target=null,bd=Infinity;
+    for(const e of S.enemies){ const d=dist2(e,pl); if(d<bd){bd=d;target=e;} }
+    if(target && bd < (pl.range*pl.range)*4){
+      const base=Math.atan2(target.y-pl.y,target.x-pl.x);
+      const shots=pl.shots, spread=0.16;
+      for(let i=0;i<shots;i++){
+        const off=(i-(shots-1)/2)*spread;
+        const a=base+off;
+        const crit=Math.random()<pl.crit;
+        S.projs.push({x:pl.x,y:pl.y,vx:Math.cos(a)*pl.projSpeed,vy:Math.sin(a)*pl.projSpeed,
+          r:pl.projR,dmg:pl.atk*(crit?2:1),crit,life:90,pierce:pl.pierce});
+      }
+      pl.cd=pl.atkCd;
+    }
+  }
+  if(pl.aura){ pl.auraT-=dt; if(pl.auraT<=0){ pl.auraT=12;   // 더 자주 피해
+    const R2=pl.auraR*pl.auraR;
+    for(const e of S.enemies){ if(dist2(e,pl) < R2){ hitEnemy(e, pl.auraDmg, false); } } } }
+
+  // 발사체
+  for(const p of S.projs){
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
+    for(const e of S.enemies){
+      if(e._dead) continue;
+      const rr=(e.r+p.r); if(dist2(e,p)<rr*rr){
+        hitEnemy(e,p.dmg,p.crit);
+        if(pl.lifesteal) pl.hp=Math.min(pl.maxHp,pl.hp+p.dmg*pl.lifesteal);
+        if(p.pierce>0){p.pierce--;} else {p.life=0;}
+        break;
+      }
+    }
+  }
+  S.projs=S.projs.filter(p=>p.life>0 && p.x>-30&&p.x<W+30&&p.y>-30&&p.y<H+30);
+
+  // ===== 적 이동 — 모든 몬스터/보스가 플레이어 방향으로 직진 =====
+  for(const e of S.enemies){
+    if(e._dead) continue;
+    const dx=pl.x-e.x, dy=pl.y-e.y;
+    const d=Math.hypot(dx,dy)||1;
+    e.ang = Math.atan2(dy,dx);
+    e.x += (dx/d)*e.spd*dt;
+    e.y += (dy/d)*e.spd*dt;
+    e.walkT = (e.walkT||0) + dt;
+
+    // 보스는 플레이어를 향해 탄환을 발사한다
+    if(e.boss){
+      e.fireCd = (e.fireCd==null? 70 : e.fireCd) - dt;
+      if(e.fireCd<=0){
+        e.fireCd = 78;
+        const t=S.time/1000;
+        const bdmg = Math.max(6, Math.round(e.dmg*0.6));   // 보스 탄환 피해
+        const bspd = 3.4 + Math.min(2.2, t/120);
+        // 후반 보스는 3갈래로 발사
+        const ways = t>90?3:1, spread=0.26;
+        for(let k=0;k<ways;k++){
+          const a=e.ang + (k-(ways-1)/2)*spread;
+          S.eprojs.push({x:e.x, y:e.y, vx:Math.cos(a)*bspd, vy:Math.sin(a)*bspd, r:8, dmg:bdmg, life:160, color:e.color||'#ff5470'});
+        }
+      }
+    }
+
+    const rr=e.r+pl.r;
+    if(dist2(e,pl)<rr*rr && pl.hurtCd<=0){
+      pl.hp-=e.dmg; pl.hurtCd=36;
+      addFloat(pl.x,pl.y-20,'-'+e.dmg,'#ff5470');
+      if(pl.hp<=0){ pl.hp=0; return gameOver('패배'); }
+    }
+  }
+
+  // 적(보스) 발사체 이동 + 플레이어 피격
+  for(const p of S.eprojs){
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
+    const rr=p.r+pl.r;
+    if(dist2(p,pl)<rr*rr && pl.hurtCd<=0){
+      pl.hp-=p.dmg; pl.hurtCd=24; p.life=0;
+      addFloat(pl.x,pl.y-20,'-'+p.dmg,'#ff8a3d');
+      if(pl.hp<=0){ pl.hp=0; return gameOver('패배'); }
+    }
+  }
+  S.eprojs=S.eprojs.filter(p=>p.life>0 && p.x>-40&&p.x<W+40&&p.y>-40&&p.y<H+40);
+  for(const e of S.enemies){ if(e._dead){ onEnemyDeath(e); } }
+  S.enemies=S.enemies.filter(e=>!e._dead);
+
+  // 경험치 오브 — 자석 효과
+  for(const o of S.orbs){
+    const dx=pl.x-o.x, dy=pl.y-o.y;
+    const d=Math.hypot(dx,dy)||1;
+    if(d<pl.magnet){
+      // 거리가 가까울수록 빠르게 끌려옴
+      const factor = 1 - d/pl.magnet;
+      const pull = (1.2 + factor*4.5)*pl.magnetPull;
+      o.vx = (o.vx||0) + (dx/d)*pull*0.18*dt;
+      o.vy = (o.vy||0) + (dy/d)*pull*0.18*dt;
+    }
+    o.vx = (o.vx||0)*0.92; o.vy = (o.vy||0)*0.92;
+    o.x += (o.vx||0)*dt; o.y += (o.vy||0)*dt;
+    if(d<pl.r+8){ o._got=true; gainXp(o.v); }
+  }
+  S.orbs=S.orbs.filter(o=>!o._got);
+
+  for(const pt of S.parts){ pt.x+=pt.vx*dt; pt.y+=pt.vy*dt; pt.life-=dt; pt.vx*=0.94; pt.vy*=0.94; }
+  S.parts=S.parts.filter(p=>p.life>0);
+  for(const f of S.floats){ f.y-=0.6*dt; f.life-=dt; }
+  S.floats=S.floats.filter(f=>f.life>0);
+
+  S.score = Math.floor(S.time/1000)*2 + S.pl.kills*5 + S.pl.level*20 + S.quizCorrect*40;
+  updateHud();
+}
+
+function hitEnemy(e,dmg,crit){
+  e.hp-=dmg;
+  addFloat(e.x,e.y-e.r,Math.round(dmg)+(crit?'!':''), crit?'#ffcf4d':'#fff');
+  for(let i=0;i<(crit?5:2);i++) S.parts.push({x:e.x,y:e.y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:14,color:e.color});
+  if(e.hp<=0 && !e._dead){ e._dead=true; }
+}
+function onEnemyDeath(e){
+  S.pl.kills++;
+  for(let i=0;i<6;i++) S.parts.push({x:e.x,y:e.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:20,color:e.color});
+  const drops=e.boss?6:1;
+  for(let i=0;i<drops;i++) S.orbs.push({x:e.x+(Math.random()-.5)*30,y:e.y+(Math.random()-.5)*30,v:Math.ceil(e.xp/drops),vx:0,vy:0});
+  if(e.boss){ S.boss=null; toast('보스 격파! 특별 보상 문제!'); setTimeout(()=>openQuiz(3,{boss:true}),450); }
+}
+function addFloat(x,y,txt,color){ S.floats.push({x,y,txt,color,life:34}); }
+
+function gainXp(v){
+  const pl=S.pl; pl.xp+=v;
+  while(pl.xp>=pl.need){ pl.xp-=pl.need; pl.level++; pl.need=Math.floor(12+pl.level*7+pl.level*pl.level*1.1);
+    const lv=pl.level;
+    // 레벨이 오를수록 점점 어려운 문제가 나오도록 난이도 확률을 조정
+    let diff;
+    const r=Math.random();
+    if(lv<=2){ diff=1; }
+    else if(lv<=4){ diff = r<0.75?1:2; }
+    else if(lv<=6){ diff = r<0.45?1:2; }
+    else if(lv<=9){ diff = r<0.20?1: r<0.90?2:3; }
+    else { diff = r<0.65?2:3; }   // 후반: 적용~보스급 문제 위주
+    openQuiz(diff,{boss:false});
+    break;
+  }
+}
+
+function unlockDex(kind,id){ if(!S.dex[kind][id]){ S.dex[kind][id]=true; DB.saveDex(S.dex);
+    const name = kind==='monster'?(MONSTERS.find(m=>m.id===id)||{}).name : kind==='boss'?(BOSSES.find(b=>b.id===id)||{}).name : (ITEMS.find(i=>i.id===id)||{}).name;
+    if(name && S.time>100) toast('도감 등록: '+name);
+  } }
+
+function updateHud(){
+  const pl=S.pl;
+  $('hpFill').style.width=clamp(pl.hp/pl.maxHp*100,0,100)+'%';
+  $('hpLbl').textContent=`HP ${Math.ceil(pl.hp)} / ${pl.maxHp}`;
+  $('xpFill').style.width=clamp(pl.xp/pl.need*100,0,100)+'%';
+  $('xpLbl').textContent=`EXP ${pl.xp} / ${pl.need}`;
+  $('hudInfo').textContent=`Lv.${pl.level} ${HEROES[pl.hero].em}`;
+  const s=Math.floor(S.time/1000); $('hudTime').textContent=`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  $('hudScore').textContent=S.score+' pt';
+}
+
+/* ===================== 렌더링 ===================== */
+function drawForestBg(){
+  // 풀밭 단색 + 약간의 점박이
+  ctx.fillStyle = '#13351a';
+  ctx.fillRect(0,0,W,H);
+  // 가벼운 얼룩
+  ctx.save();
+  ctx.globalAlpha=0.18;
+  ctx.fillStyle='#1d4d24';
+  for(let i=0;i<8;i++){
+    const x=(i*173+91)%W, y=(i*97+41)%H;
+    ctx.beginPath(); ctx.ellipse(x,y,80+((i*53)%40),50+((i*37)%30),0,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawDecor(){
+  if(!S.decor) return;
+  for(const d of S.decor){
+    if(d.type==='grass'){
+      ctx.save();
+      ctx.translate(d.x,d.y);
+      ctx.scale(d.s,d.s);
+      ctx.strokeStyle=d.c; ctx.lineWidth=2; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(-3,4); ctx.quadraticCurveTo(-2,-2,-5,-8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,4); ctx.quadraticCurveTo(0,-2,0,-9); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(3,4); ctx.quadraticCurveTo(2,-2,5,-8); ctx.stroke();
+      ctx.restore();
+    } else if(d.type==='flower'){
+      ctx.save(); ctx.translate(d.x,d.y);
+      ctx.strokeStyle='#3a7038'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(0,6); ctx.lineTo(0,-2); ctx.stroke();
+      ctx.fillStyle=d.c;
+      for(let i=0;i<5;i++){
+        const a=i/5*Math.PI*2;
+        ctx.beginPath(); ctx.arc(Math.cos(a)*3, Math.sin(a)*3-2, 2.5, 0, 7); ctx.fill();
+      }
+      ctx.fillStyle='#ffd24d';
+      ctx.beginPath(); ctx.arc(0,-2,1.6,0,7); ctx.fill();
+      ctx.restore();
+    } else if(d.type==='tree'){
+      ctx.save();
+      ctx.translate(d.x,d.y);
+      ctx.scale(d.s,d.s);
+      // 그림자
+      ctx.fillStyle='rgba(0,0,0,.25)';
+      ctx.beginPath(); ctx.ellipse(0,22,22,7,0,0,7); ctx.fill();
+      // 줄기
+      ctx.fillStyle='#5a3a22';
+      ctx.fillRect(-5,-6,10,28);
+      // 잎
+      ctx.fillStyle='#2d6b35';
+      ctx.beginPath(); ctx.arc(0,-18,22,0,7); ctx.fill();
+      ctx.fillStyle='#3a8042';
+      ctx.beginPath(); ctx.arc(-8,-22,14,0,7); ctx.fill();
+      ctx.beginPath(); ctx.arc(10,-20,14,0,7); ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+function render(){
+  if(!S){ return; }
+  ctx.clearRect(0,0,W,H);
+  drawForestBg();
+  drawDecor();
+
+  // 경험치 오브
+  for(const o of S.orbs){
+    ctx.save();
+    ctx.translate(o.x,o.y);
+    ctx.rotate(Math.PI/4);
+    ctx.fillStyle='#5af7ff'; ctx.shadowColor='#5af7ff'; ctx.shadowBlur=10;
+    ctx.fillRect(-4,-4,8,8);
+    ctx.restore();
+  }
+
+  // 자석 범위 표시 (큰 자석을 가졌을 때)
+  const pl=S.pl;
+  if(pl.magnet > 130){
+    ctx.save();
+    ctx.strokeStyle='rgba(196,107,255,.25)';
+    ctx.lineWidth=1.5;
+    ctx.setLineDash([4,5]);
+    ctx.beginPath(); ctx.arc(pl.x,pl.y,pl.magnet,0,7); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // 적
+  for(const e of S.enemies){
+    if(e.boss) drawBoss(e); else drawMonster(e);
+  }
+
+  // 발사체
+  for(const p of S.projs){
+    ctx.save(); ctx.shadowBlur=12; ctx.shadowColor=p.crit?'#ffcf4d':'#7af7ff';
+    ctx.fillStyle=p.crit?'#ffcf4d':'#bdfcff';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
+    ctx.restore();
+  }
+  // 적(보스) 발사체
+  for(const p of S.eprojs){
+    ctx.save(); ctx.shadowBlur=14; ctx.shadowColor='#ff3b66';
+    ctx.fillStyle='#ff5470';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
+    ctx.fillStyle='#ffd0da';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*0.45,0,7); ctx.fill();
+    ctx.restore();
+  }
+
+  // 플레이어
+  drawPlayer(pl);
+
+  // 오라
+  if(pl.aura){
+    const R=pl.auraR||104;
+    ctx.save();
+    ctx.globalAlpha=.16; ctx.fillStyle='#c46bff';
+    ctx.beginPath(); ctx.arc(pl.x,pl.y,R,0,7); ctx.fill();
+    ctx.globalAlpha=.5; ctx.lineWidth=2; ctx.strokeStyle='#d79bff';
+    ctx.beginPath(); ctx.arc(pl.x,pl.y,R,0,7); ctx.stroke();
+    ctx.restore();
+  }
+
+  for(const p of S.parts){
+    ctx.save(); ctx.globalAlpha=Math.max(0,p.life/20); ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-2,p.y-2,4,4); ctx.restore();
+  }
+  ctx.font='bold 13px sans-serif';
+  for(const f of S.floats){
+    ctx.save(); ctx.globalAlpha=Math.max(0,f.life/34); ctx.fillStyle=f.color;
+    ctx.lineWidth=3; ctx.strokeStyle='rgba(0,0,0,.7)';
+    ctx.strokeText(f.txt,f.x,f.y); ctx.fillText(f.txt,f.x,f.y); ctx.restore();
+  }
+  if(S.boss){
+    const b=S.boss; const bw=Math.min(W-40,360),bx=(W-bw)/2,by=H-30;
+    ctx.fillStyle='rgba(10,7,20,.8)'; ctx.fillRect(bx-2,by-2,bw+4,16);
+    ctx.fillStyle='#3a2a66'; ctx.fillRect(bx,by,bw,12);
+    ctx.fillStyle='#ff5470'; ctx.fillRect(bx,by,bw*clamp(b.hp/b.maxHp,0,1),12);
+    ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center'; ctx.fillText('💀 '+b.bossData.name,W/2,by-8);
+    ctx.textAlign='left';
+  }
+}
+
+/* ===== 캐릭터 렌더링 ===== */
+function drawPlayer(pl){
+  const h=HEROES[pl.hero]; const sk=h.skin;
+  const bob = Math.sin(pl.walkT*0.25)*1.2;
+  ctx.save();
+  ctx.translate(pl.x,pl.y);
+
+  // 그림자
+  ctx.fillStyle='rgba(0,0,0,.35)';
+  ctx.beginPath(); ctx.ellipse(0,15,14,4,0,0,7); ctx.fill();
+
+  // 망토
+  ctx.fillStyle=sk.cape;
+  ctx.beginPath();
+  ctx.moveTo(-7,-3); ctx.lineTo(7,-3); ctx.lineTo(5,10); ctx.lineTo(-5,10); ctx.closePath(); ctx.fill();
+
+  // 다리
+  ctx.fillStyle='#2a1f3a';
+  ctx.fillRect(-5,8+bob,4,8);
+  ctx.fillRect(1,8-bob,4,8);
+
+  // 몸통
+  ctx.fillStyle=sk.body;
+  ctx.beginPath();
+  ctx.roundRect ? (ctx.beginPath(), ctx.roundRect(-7,-3,14,12,3)) : ctx.rect(-7,-3,14,12);
+  ctx.fill();
+
+  // 머리
+  ctx.fillStyle=sk.head;
+  ctx.beginPath(); ctx.arc(0,-9,6,0,7); ctx.fill();
+
+  // 머리카락(간단)
+  ctx.fillStyle='#2a1a14';
+  ctx.beginPath(); ctx.arc(0,-12,5.5,Math.PI,0); ctx.fill();
+
+  // 눈
+  const hurt = pl.hurtCd>0;
+  ctx.fillStyle='#000';
+  ctx.fillRect(-2.5,-9,1.5,1.5);
+  ctx.fillRect(1.5,-9,1.5,1.5);
+
+  // 무기 (오른쪽 또는 왼쪽)
+  ctx.save();
+  ctx.scale(pl.facing,1);
+  if(h.weapon==='sword'){
+    ctx.fillStyle='#c9d8e8';
+    ctx.fillRect(7,-6,2,11);
+    ctx.fillStyle='#7a5a2c';
+    ctx.fillRect(6,5,4,3);
+  } else if(h.weapon==='staff'){
+    ctx.fillStyle='#7a5a2c'; ctx.fillRect(7,-8,2,14);
+    ctx.fillStyle='#c46bff'; ctx.shadowColor='#c46bff'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(8,-9,3,0,7); ctx.fill();
+    ctx.shadowBlur=0;
+  } else if(h.weapon==='bow'){
+    ctx.strokeStyle='#7a5a2c'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.arc(8,0,7,-Math.PI/2,Math.PI/2); ctx.stroke();
+    ctx.strokeStyle='#e9e3ff'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(8,-7); ctx.lineTo(8,7); ctx.stroke();
+  } else if(h.weapon==='shield'){
+    ctx.fillStyle='#7a8aa0';
+    ctx.beginPath();
+    ctx.moveTo(7,-5); ctx.lineTo(11,-3); ctx.lineTo(11,3); ctx.lineTo(7,5); ctx.lineTo(7,5); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#3a4a60'; ctx.lineWidth=1.2; ctx.stroke();
+  }
+  ctx.restore();
+
+  // 피격 플래시
+  if(hurt){
+    ctx.fillStyle='rgba(255,84,112,.35)';
+    ctx.beginPath(); ctx.arc(0,0,17,0,7); ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawMonster(e){
+  const wt = e.walkT||0;
+  const bob = Math.sin(wt*0.25)*1.5;
+  ctx.save();
+  ctx.translate(e.x,e.y);
+
+  // 그림자
+  ctx.fillStyle='rgba(0,0,0,.35)';
+  ctx.beginPath(); ctx.ellipse(0,e.r-2,e.r*0.8,3.5,0,0,7); ctx.fill();
+
+  // 종류별 캐릭터 묘사
+  const id = e.id;
+  ctx.shadowColor=e.color; ctx.shadowBlur=8;
+  ctx.fillStyle=e.color;
+  const r=e.r;
+
+  if(id==='slime'){
+    ctx.beginPath();
+    ctx.ellipse(0,2+bob*0.3,r,r*0.85,0,0,7); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.fillRect(-r*0.4,-r*0.1+bob*0.3,3,3); ctx.fillRect(r*0.2,-r*0.1+bob*0.3,3,3);
+    ctx.fillStyle='#000'; ctx.fillRect(-r*0.3,0+bob*0.3,1.5,1.5); ctx.fillRect(r*0.3,0+bob*0.3,1.5,1.5);
+  } else if(id==='bat'){
+    // 날개
+    const wing = Math.sin(wt*0.5)*0.4;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(-r*1.2, -r*0.5 - wing*r, -r*1.6, 0);
+    ctx.quadraticCurveTo(-r*1.2, r*0.3, 0, r*0.2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(r*1.2, -r*0.5 - wing*r, r*1.6, 0);
+    ctx.quadraticCurveTo(r*1.2, r*0.3, 0, r*0.2);
+    ctx.fill();
+    // 몸
+    ctx.beginPath(); ctx.arc(0,0,r*0.5,0,7); ctx.fill();
+    ctx.fillStyle='#ff5470'; ctx.beginPath(); ctx.arc(-r*0.15,0,1.5,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.15,0,1.5,0,7); ctx.fill();
+  } else if(id==='cube'){
+    ctx.fillRect(-r,-r,r*2,r*2);
+    ctx.fillStyle='#fff'; ctx.fillRect(-r*0.6,-r*0.3,5,5); ctx.fillRect(r*0.1,-r*0.3,5,5);
+    ctx.fillStyle='#000'; ctx.fillRect(-r*0.5,-r*0.2,2,2); ctx.fillRect(r*0.2,-r*0.2,2,2);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-r*0.5,r*0.4); ctx.lineTo(-r*0.2,r*0.6); ctx.lineTo(0,r*0.4); ctx.lineTo(r*0.2,r*0.6); ctx.lineTo(r*0.5,r*0.4); ctx.stroke();
+  } else if(id==='spider'){
+    // 다리
+    ctx.strokeStyle=e.color; ctx.lineWidth=2;
+    for(let i=0;i<4;i++){
+      const ay = -r*0.4 + i*r*0.3;
+      const sw = Math.sin(wt*0.3+i)*2;
+      ctx.beginPath(); ctx.moveTo(-r*0.2,ay); ctx.lineTo(-r*1.2,ay+sw); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(r*0.2,ay); ctx.lineTo(r*1.2,ay-sw); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(0,0,r*0.7,0,7); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.fillRect(-r*0.3,-r*0.2,3,3); ctx.fillRect(r*0.1,-r*0.2,3,3);
+  } else if(id==='ghost'){
+    ctx.beginPath();
+    ctx.arc(0,-r*0.2,r,Math.PI,0);
+    const yb = r*0.8 + Math.sin(wt*0.3)*1.5;
+    ctx.lineTo(r,yb);
+    ctx.quadraticCurveTo(r*0.5,yb-3,0,yb);
+    ctx.quadraticCurveTo(-r*0.5,yb-3,-r,yb);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.arc(-r*0.3,-r*0.3,2,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.3,-r*0.3,2,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,r*0.05,2.5,0,Math.PI); ctx.fill();
+  } else if(id==='wisp'){
+    ctx.shadowBlur=18;
+    ctx.beginPath(); ctx.arc(0,bob*0.3,r,0,7); ctx.fill();
+    ctx.fillStyle='#fff6b3';
+    ctx.beginPath(); ctx.arc(0,-r*0.2+bob*0.3,r*0.5,0,7); ctx.fill();
+  } else if(id==='golem'){
+    // 팔
+    const armSw = Math.sin(wt*0.2)*3;
+    ctx.fillRect(-r-4, -r*0.2+armSw, 6, r);
+    ctx.fillRect(r-2, -r*0.2-armSw, 6, r);
+    // 몸통
+    ctx.fillRect(-r*0.7,-r*0.4,r*1.4,r*1.4);
+    // 머리
+    ctx.fillRect(-r*0.5,-r-2,r,r*0.8);
+    ctx.fillStyle='#fff'; ctx.fillRect(-r*0.3,-r*0.7,3,3); ctx.fillRect(r*0.05,-r*0.7,3,3);
+    ctx.fillStyle='#000'; ctx.fillRect(-r*0.25,-r*0.65,1.5,1.5); ctx.fillRect(r*0.1,-r*0.65,1.5,1.5);
+  } else if(id==='eye'){
+    ctx.beginPath(); ctx.arc(0,bob*0.3,r,0,7); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(0,bob*0.3,r*0.65,0,7); ctx.fill();
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(0,bob*0.3,r*0.35,0,7); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-r*0.1,bob*0.3-2,r*0.12,0,7); ctx.fill();
+  } else if(id==='snake'){
+    // S자형 몸
+    ctx.strokeStyle=e.color; ctx.lineWidth=r*0.8; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(-r,r*0.6);
+    ctx.quadraticCurveTo(0, r*0.3, r*0.3, -r*0.2);
+    ctx.quadraticCurveTo(r*0.5, -r*0.5, 0, -r*0.5);
+    ctx.stroke();
+    // 머리
+    ctx.fillStyle=e.color;
+    ctx.beginPath(); ctx.arc(0,-r*0.5,r*0.45,0,7); ctx.fill();
+    ctx.fillStyle='#ff5470';
+    ctx.beginPath(); ctx.moveTo(0,-r*0.4); ctx.lineTo(-2,-r*0.4+5); ctx.lineTo(2,-r*0.4+5); ctx.closePath(); ctx.fill();
+  } else if(id==='knight'){
+    // 갑옷
+    ctx.fillRect(-r*0.7,-r*0.3,r*1.4,r*1.2);
+    // 투구
+    ctx.fillStyle='#b8b8c0';
+    ctx.beginPath();
+    ctx.moveTo(-r*0.5,-r);
+    ctx.lineTo(r*0.5,-r);
+    ctx.lineTo(r*0.5,-r*0.2);
+    ctx.lineTo(-r*0.5,-r*0.2);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#ff5470'; ctx.fillRect(0,-r,1.5,r*0.6);
+    // 눈
+    ctx.fillStyle='#000'; ctx.fillRect(-r*0.3,-r*0.6,r*0.6,2);
+    // 검
+    ctx.fillStyle='#dde'; ctx.fillRect(r*0.7,-r*0.5,2,r*1.2);
+  } else if(id==='reaper'){
+    // 후드
+    ctx.beginPath();
+    ctx.arc(0,-r*0.2,r,Math.PI,0);
+    ctx.lineTo(r*0.6,r*0.5);
+    ctx.lineTo(-r*0.6,r*0.5); ctx.closePath(); ctx.fill();
+    // 눈
+    ctx.fillStyle='#ff5470'; ctx.shadowColor='#ff5470'; ctx.shadowBlur=8;
+    ctx.fillRect(-r*0.35,-r*0.4,r*0.3,r*0.15);
+    ctx.fillRect(r*0.05,-r*0.4,r*0.3,r*0.15);
+    ctx.shadowBlur=0;
+    // 낫
+    ctx.strokeStyle='#888'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(r,-r); ctx.lineTo(r,r*0.5); ctx.stroke();
+    ctx.fillStyle='#ccd'; ctx.beginPath();
+    ctx.moveTo(r,-r); ctx.quadraticCurveTo(r*1.6,-r*0.8,r*1.4,-r*0.3); ctx.lineTo(r,-r*0.8); ctx.closePath(); ctx.fill();
+  } else if(id==='star'){
+    ctx.beginPath();
+    for(let i=0;i<10;i++){
+      const a = Math.PI/5*i - Math.PI/2;
+      const rr = i%2 ? r*0.5 : r;
+      ctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#000'; ctx.fillRect(-r*0.2,-r*0.1,2,2); ctx.fillRect(r*0.1,-r*0.1,2,2);
+    ctx.fillStyle='#ff7aa8'; ctx.beginPath(); ctx.arc(-r*0.18,r*0.1,1.5,0,7); ctx.fill();
+    ctx.beginPath(); ctx.arc(r*0.18,r*0.1,1.5,0,7); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.arc(0,0,r,0,7); ctx.fill();
+  }
+
+  ctx.shadowBlur=0;
+  ctx.restore();
+
+  // HP 바 (큰 적)
+  if(e.maxHp>30){
+    const w=e.r*2;
+    ctx.fillStyle='#000';
+    ctx.fillRect(e.x-w/2,e.y-e.r-10,w,4);
+    ctx.fillStyle='#ff7a8a';
+    ctx.fillRect(e.x-w/2,e.y-e.r-10,w*clamp(e.hp/e.maxHp,0,1),4);
+  }
+}
+
+function drawBoss(e){
+  const wt = e.walkT||0;
+  const bob = Math.sin(wt*0.18)*2;
+  ctx.save();
+  ctx.translate(e.x,e.y+bob);
+  // 그림자
+  ctx.fillStyle='rgba(0,0,0,.4)';
+  ctx.beginPath(); ctx.ellipse(0,e.r,e.r*0.9,7,0,0,7); ctx.fill();
+
+  const r=e.r;
+  // 망토
+  ctx.fillStyle = '#1a0a1a';
+  ctx.beginPath();
+  ctx.moveTo(-r*0.7,-r*0.3); ctx.lineTo(r*0.7,-r*0.3);
+  ctx.lineTo(r*0.9,r); ctx.lineTo(-r*0.9,r); ctx.closePath(); ctx.fill();
+
+  // 몸통 (갑옷)
+  ctx.shadowColor=e.color; ctx.shadowBlur=14;
+  ctx.fillStyle=e.color;
+  ctx.beginPath();
+  ctx.moveTo(-r*0.6,-r*0.2);
+  ctx.lineTo(r*0.6,-r*0.2);
+  ctx.lineTo(r*0.5,r*0.8);
+  ctx.lineTo(-r*0.5,r*0.8);
+  ctx.closePath(); ctx.fill();
+  ctx.shadowBlur=0;
+
+  // x² 문장
+  ctx.fillStyle='rgba(255,255,255,.85)';
+  ctx.font='bold '+Math.floor(r*0.35)+'px serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('x²',0,r*0.3);
+
+  // 어깨
+  ctx.fillStyle=e.color;
+  ctx.beginPath(); ctx.arc(-r*0.7,-r*0.15,r*0.28,0,7); ctx.fill();
+  ctx.beginPath(); ctx.arc(r*0.7,-r*0.15,r*0.28,0,7); ctx.fill();
+
+  // 머리
+  ctx.fillStyle='#1a0a1a';
+  ctx.beginPath(); ctx.arc(0,-r*0.55,r*0.42,0,7); ctx.fill();
+  ctx.strokeStyle=e.color; ctx.lineWidth=2;
+  ctx.stroke();
+
+  // 왕관
+  ctx.fillStyle='#ffd24d';
+  ctx.beginPath();
+  ctx.moveTo(-r*0.35,-r*0.85);
+  ctx.lineTo(-r*0.2,-r*1.1);
+  ctx.lineTo(-r*0.05,-r*0.85);
+  ctx.lineTo(r*0.1,-r*1.15);
+  ctx.lineTo(r*0.25,-r*0.85);
+  ctx.lineTo(r*0.35,-r*1.05);
+  ctx.lineTo(r*0.35,-r*0.8);
+  ctx.lineTo(-r*0.35,-r*0.8);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#ff5470';
+  ctx.beginPath(); ctx.arc(0,-r*0.95,2.5,0,7); ctx.fill();
+
+  // 빨간 눈
+  ctx.fillStyle='#ff3050'; ctx.shadowColor='#ff3050'; ctx.shadowBlur=10;
+  ctx.fillRect(-r*0.22,-r*0.6,r*0.15,r*0.08);
+  ctx.fillRect(r*0.07,-r*0.6,r*0.15,r*0.08);
+  ctx.shadowBlur=0;
+
+  ctx.textAlign='left';
+  ctx.restore();
+}
+
+/* ===================== 퀴즈 ===================== */
+function startQuizTimer(){
+  // 제한시간 없음: 학생이 충분히 생각하고 풀 수 있도록 타이머를 두지 않는다.
+  clearInterval(S._qt);
+}
+function openQuiz(diff,opts){
+  S.paused=true;
+  if(!S.usedKeys) S.usedKeys=new Set();
+  const p=MathGen.generate(diff,S.usedKeys);
+  S.curQuiz={p,opts,resolved:false,t0:Date.now(),limit:p.time*1000};
+  const bd=$('qBadge'); bd.className='qbadge d'+diff;
+  bd.textContent = (opts&&opts.boss)?'💀 보스 특별문제'
+    : diff===3?('심화 문제 · '+p.area)
+    : ((diff===1?'기초 진단':'적용 문제')+' · '+p.area);
+  $('qProgress').textContent=`정답 시 강력 보상 · 1~4 키로 선택 가능`;
+  $('qText').innerHTML=p.q;
+  const res=$('qResult'); res.style.display='none'; res.className='qresult';
+  const ch=$('qChoices'), iw=$('qInputWrap');
+  ch.innerHTML='';
+  if(p.type==='mc'){ iw.style.display='none'; ch.style.display='grid';
+    p.choices.forEach((c,i)=>{ const b=document.createElement('button'); b.className='choice';
+      b.innerHTML='<span class="keytag">'+(i+1)+'</span><span class="mono">'+c+'</span>'; b.dataset.i=i; b.onclick=()=>{ if(!S.curQuiz.resolved) resolveQuiz(i===p.answerIndex,false,i); };
+      ch.appendChild(b); });
+  } else { ch.style.display='none'; iw.style.display='flex'; $('qInput').value=''; setTimeout(()=>{try{$('qInput').focus();}catch(e){}},60); }
+  $('quizWrap').classList.add('on');
+  startQuizTimer();
+}
+$('qSubmit').onclick=()=>submitShort();
+$('qInput').addEventListener('keydown',e=>{ if(e.key==='Enter') submitShort(); });
+function submitShort(){ const q=S.curQuiz; if(!q||q.resolved)return;
+  const v=MathGen.norm($('qInput').value); if(v==='')return;
+  const ok=q.p.accept.map(MathGen.norm).includes(v); resolveQuiz(ok,false); }
+
+function resolveQuiz(correct,timedOut,chosenIdx){
+  const q=S.curQuiz; if(q.resolved)return; q.resolved=true; clearInterval(S._qt);
+  const p=q.p; const used=Math.round((Date.now()-q.t0)/1000);
+  S.quizCount++; if(correct) S.quizCorrect++;
+  S.qLog.push({grade:S.info.grade,cls:S.info.cls,no:S.info.no,name:S.info.name,
+    area:p.area,diff:p.diff,id:p.id,correct:correct?1:0,timedOut:timedOut?1:0,used,ts:Date.now()});
+  if(p.type==='mc'){ const btns=$('qChoices').children;
+    for(let i=0;i<btns.length;i++){ if(i===p.answerIndex) btns[i].classList.add('correct');
+      if(chosenIdx===i && !correct) btns[i].classList.add('wrong'); btns[i].onclick=null; } }
+  const ansTxt = p.type==='mc'? p.choices[p.answerIndex] : p.accept[0];
+  const res=$('qResult'); res.style.display='block';
+  res.className='qresult '+(correct?'ok':'bad');
+  res.innerHTML = (correct?'✅ <b style="color:var(--ok)">정답!</b> ':(timedOut?'⏰ <b style="color:var(--bad)">시간 초과!</b> ':'❌ <b style="color:var(--bad)">오답!</b> '))
+    + (correct?'':('정답: <b>'+ansTxt+'</b><br>'))
+    + '<span class="small">풀이: '+p.explain+'</span>'
+    + '<div style="margin-top:10px"><button class="btn sm" style="width:100%" id="qNext">'
+    + (correct?'🎁 보상 선택 ▶':'강화 선택 ▶')+'</button></div>';
+  $('qNext').onclick=()=>{ $('quizWrap').classList.remove('on'); openLevelChoices(correct,q.opts); };
+}
+
+function pickN(arr,n){ const a=arr.slice(); const out=[]; while(out.length<n && a.length){ out.push(a.splice(Math.floor(Math.random()*a.length),1)[0]); } return out; }
+function openLevelChoices(correct,opts){
+  const wrap=$('lvCards'); wrap.innerHTML='';
+  let choices;
+  if(correct){
+    const pool = (opts&&opts.boss) ? ITEMS.filter(i=>i.tier==='epic'||i.tier==='rare')
+                                   : ITEMS.filter(i=>i.tier==='rare'||(i.tier==='epic'&&Math.random()<0.5));
+    choices=pickN(pool,3);
+    if(choices.length<3) choices=choices.concat(pickN(ITEMS.filter(i=>!choices.includes(i)&&i.tier!=='weak'),3-choices.length));
+    $('lvTitle').textContent = '🎉 정답 보상!';
+    $('lvSub').textContent = '희귀·전설급 강화를 획득했습니다! (1~3 키로 선택)';
+  } else {
+    // 오답 → 약한 위로 아이템 '하나'만 지급 (선택지 없음)
+    const weak = ITEMS.filter(i=>i.tier==='weak');
+    choices=[ weak[Math.floor(Math.random()*weak.length)] ];
+    $('lvTitle').textContent = '오답… 약한 보상';
+    $('lvSub').textContent = '아쉽지만 이번엔 약한 보상 하나만 받습니다.';
+  }
+  choices.forEach((it,ci)=>{ const c=document.createElement('div'); c.className='lvcard';
+    const rk = it.tier==='epic'?'epic':it.tier==='rare'?'rare':it.tier==='weak'?'weak':'normal';
+    const rkLabel = it.tier==='epic'?'전설':it.tier==='rare'?'희귀':it.tier==='weak'?'약함':'보통';
+    c.innerHTML=`<span class="keytag lvkey">${ci+1}</span><span class="rk ${rk}">${rkLabel}</span>
+      <div class="ic">${it.em}</div><h4>${it.name}</h4><p>${it.desc}</p>`;
+    c.onclick=()=>{ it.apply(S.pl); unlockDex('item',it.id); $('levelWrap').classList.remove('on'); S.paused=false; S.lastTs=performance.now(); toast(it.em+' '+it.name+' 획득!'); };
+    wrap.appendChild(c); });
+  $('levelWrap').classList.add('on');
+}
+
+let toastT=null;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('on'),1800); }
+
+function gameOver(reason){
+  if(!S||!S.running) return; S.running=false; clearInterval(S._qt);
+  const pl=S.pl, sec=Math.floor(S.time/1000);
+  const rate = S.quizCount? Math.round(S.quizCorrect/S.quizCount*100):0;
+  const rec={grade:S.info.grade,cls:S.info.cls,no:S.info.no,name:S.info.name,
+    score:S.score,rate,level:pl.level,kills:pl.kills,time:sec,ts:Date.now()};
+  const board=DB.pushLeader(rec);
+  const rank=board.findIndex(r=>r.ts===rec.ts)+1;
+  DB.pushLog(S.qLog); DB.clearSave();
+  const qLogCopy = S.qLog.slice();
+  if(Cloud.enabled){
+    toast('🌐 공유 전당에 기록 전송 중…');
+    Cloud.submit(rec, qLogCopy).then(ok=>{
+      toast(ok ? '✅ 공유 전당에 기록되었습니다!' : '⚠ 전송 실패 — 인터넷/주소를 확인하세요.');
+    });
+  }
+  $('overTitle').textContent = reason==='패배'?'💀 게임 오버':'게임 종료';
+  $('overScore').textContent=S.score.toLocaleString();
+  $('ovTime').textContent=`${Math.floor(sec/60)}분 ${sec%60}초`;
+  $('ovLevel').textContent='Lv.'+pl.level;
+  $('ovKills').textContent=pl.kills+' 마리';
+  $('ovQuiz').textContent=`${S.quizCorrect} / ${S.quizCount}`;
+  $('ovRate').textContent=rate+'%';
+  $('ovRank').textContent=rank+'위 / '+board.length+'명';
+  const byArea={};
+  for(const r of S.qLog){ (byArea[r.area]=byArea[r.area]||{a:0,c:0}); byArea[r.area].a++; byArea[r.area].c+=r.correct; }
+  let weak=null;
+  for(const k in byArea){ const x=byArea[k]; if(x.a>=1){ const rt=x.c/x.a; if(!weak||rt<weak.rt) weak={area:k,rt,a:x.a}; } }
+  const wb=$('weakBox');
+  if(S.quizCount===0){ wb.innerHTML='이번 판에는 문제를 풀지 않았어요. 다음엔 레벨업으로 문제에 도전해 보세요!'; }
+  else if(weak && weak.rt<1){ wb.innerHTML=`📌 <b>복습 추천 영역:</b> ${weak.area} (정답률 ${Math.round(weak.rt*100)}%)`; }
+  else { wb.innerHTML=`🌟 훌륭해요! 푼 문제 정답률 ${rate}%. 이차함수 학습 준비가 잘 되어 있어요.`; }
+  showScreen('screen-over');
+}
+
+function renderDex(kind){
+  const grid=$('dexGrid'); grid.innerHTML=''; const dex=DB.dex();
+  const list = kind==='monster'?MONSTERS : kind==='boss'?BOSSES : ITEMS;
+  let got=0;
+  list.forEach(o=>{ const unlocked = kind==='item'? dex.item[o.id] : kind==='boss'? dex.boss[o.id] : dex.monster[o.id];
+    if(unlocked) got++;
+    const d=document.createElement('div'); d.className='dex'+(unlocked?'':' locked');
+    d.innerHTML=`${o.rare?'<span class="rare-mark">★희귀</span>':''}<div class="em">${unlocked?o.em:'❓'}</div>
+      <h5>${unlocked?o.name:'???'}</h5><p>${unlocked?(kind==='item'?o.desc+'<br><span style="color:#9a8fc0">'+o.story+'</span>':o.story):'아직 만나지 못함'}</p>`;
+    grid.appendChild(d); });
+  $('dexCount').textContent=`수집 ${got} / ${list.length}`;
+  document.querySelectorAll('[data-dex]').forEach(b=>b.className='btn '+(b.dataset.dex===kind?'alt':'ghost')+' sm');
+}
+
+function renderHall(highlightTs){
+  let board=DB.leader();
+  const sel=$('hallFilter');
+  const paint=()=>{
+    const classes=[...new Set(board.map(r=>`${r.grade}-${r.cls}`))].filter(x=>!x.includes('undefined'));
+    const cur=sel.value||'all';
+    sel.innerHTML='<option value="all">전체 학급</option>'+classes.map(c=>`<option value="${c}">${c}반</option>`).join('');
+    sel.value=[...sel.options].some(o=>o.value===cur)?cur:'all';
+    const f=sel.value; const rows=board.filter(r=>f==='all'||`${r.grade}-${r.cls}`===f);
+    const tb=$('hallBody'); tb.innerHTML='';
+    if(!rows.length){ tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#9a8fc0">아직 기록이 없어요.</td></tr>'; }
+    rows.forEach((r,i)=>{ const tr=document.createElement('tr'); if(r.ts===highlightTs) tr.className='me';
+      const rk=i===0?'rank1':i===1?'rank2':i===2?'rank3':'';
+      tr.innerHTML=`<td class="${rk}">${i+1}</td><td>${r.grade}-${r.cls}-${r.no}</td><td>${r.name||'-'}</td><td class="${rk}">${(r.score||0).toLocaleString()}</td><td>${r.rate||0}%</td>`;
+      tb.appendChild(tr); });
+  };
+  sel.onchange=paint; paint();
+  if(Cloud.enabled){
+    $('hallNote').textContent='🌐 공유 전당 불러오는 중…';
+    Cloud.fetchAll().then(data=>{
+      if(data){ board=mergeBoards(board, data.leader); paint();
+        $('hallNote').textContent='🌐 모든 기기의 공유 명예의 전당입니다.'; }
+      else { $('hallNote').textContent='⚠ 공유 전당 연결 실패 — 이 기기 기록만 표시합니다. (인터넷 확인)'; }
+    });
+  } else {
+    $('hallNote').textContent = Store.persistent? '※ 기록은 이 기기/브라우저에 저장됩니다. (공유 전당 미설정)' : '※ 미리보기 환경.';
+  }
+}
+
+function renderAdmin(){
+  const paint=(log, board)=>{
+    const cat={};
+    for(const r of log){ (cat[r.area]=cat[r.area]||{a:0,c:0}); cat[r.area].a++; cat[r.area].c+=r.correct; }
+    const ct=$('adminCat'); ct.innerHTML='';
+    const cats=Object.keys(cat).sort((a,b)=> (cat[a].c/cat[a].a)-(cat[b].c/cat[b].a));
+    if(!cats.length) ct.innerHTML='<tr><td colspan="4" style="text-align:center;color:#9a8fc0">데이터 없음</td></tr>';
+    cats.forEach(k=>{ const x=cat[k]; const rt=Math.round(x.c/x.a*100);
+      const tr=document.createElement('tr'); tr.innerHTML=`<td>${k}</td><td>${x.a}</td><td>${x.c}</td><td style="color:${rt<60?'#ff5470':rt<80?'#ffcf4d':'#3ef08a'}">${rt}%</td>`; ct.appendChild(tr); });
+    const stu={};
+    for(const r of board){ const key=`${r.grade}-${r.cls}-${r.no}|${r.name}`; (stu[key]=stu[key]||{plays:0,best:0,rateSum:0}); stu[key].plays++; stu[key].best=Math.max(stu[key].best,r.score); stu[key].rateSum+=r.rate; }
+    const st=$('adminStu'); st.innerHTML='';
+    const keys=Object.keys(stu).sort((a,b)=>stu[b].best-stu[a].best);
+    if(!keys.length) st.innerHTML='<tr><td colspan="5" style="text-align:center;color:#9a8fc0">기록 없음</td></tr>';
+    keys.forEach(k=>{ const [id,name]=k.split('|'); const x=stu[k];
+      const tr=document.createElement('tr'); tr.innerHTML=`<td>${id}</td><td>${name}</td><td>${x.best.toLocaleString()}</td><td>${x.plays}</td><td>${Math.round(x.rateSum/x.plays)}%</td>`; st.appendChild(tr); });
+    const src = Cloud.enabled ? '🌐 공유(전체 기기) 데이터' : '이 기기 데이터';
+    $('adminNote').textContent=`${src} · 총 응답 ${log.length}건 · 랭킹 기록 ${board.length}건`;
+    A._log=log; A._board=board; // CSV 다운로드용 캐시
+  };
+  paint(DB.log(), DB.leader());
+  if(Cloud.enabled){
+    Cloud.fetchAll().then(data=>{ if(data){ paint(mergeLogs(DB.log(),data.log), mergeBoards(DB.leader(),data.leader)); } });
+  }
+}
+const A={_log:null,_board:null}; // 관리자 화면이 현재 보고 있는 데이터(로컬+클라우드 병합본)
+function downloadCSV(name,rows){
+  const csv='\ufeff'+rows.map(r=>r.map(c=>{const s=String(c==null?'':c); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+function snapshot(){ if(!S)return; const pl=S.pl;
+  DB.setSave({info:S.info,time:S.time,score:S.score,quizCount:S.quizCount,quizCorrect:S.quizCorrect,
+    qLog:S.qLog,bossIdx:S.bossIdx,pl:{...pl}}); }
+function loadSave(){ const s=DB.save(); if(!s)return false;
+  showScreen('screen-game'); resize();
+  S={info:s.info,pl:s.pl,enemies:[],projs:[],eprojs:[],orbs:[],parts:[],floats:[],
+     time:s.time,spawnT:0,spawnInt:1900,bossT:20000,bossIdx:s.bossIdx||0,boss:null,
+     running:true,paused:false,score:s.score,quizCount:s.quizCount,quizCorrect:s.quizCorrect,qLog:s.qLog||[],
+     lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
+  // 호환성
+  if(S.pl.magnetPull===undefined) S.pl.magnetPull=1.0;
+  if(S.pl.magnet===undefined) S.pl.magnet=90;
+  if(S.pl.walkT===undefined) S.pl.walkT=0;
+  if(S.pl.facing===undefined) S.pl.facing=1;
+  buildForest();
+  S.pl.x=W/2; S.pl.y=H/2; S.pl.cd=0; S.pl.hurtCd=0;
+  requestAnimationFrame(loop); toast('이어하기 — 행운을 빌어요!'); return true; }
+
+function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id)); }
+
+$('btnNew').onclick=()=>showScreen('screen-enroll');
+$('btnBackTitle1').onclick=()=>showScreen('screen-title');
+$('btnResume').onclick=()=>loadSave();
+$('btnGo').onclick=()=>{
+  const name=$('inName').value.trim();
+  const cls=$('inClass').value.trim(), no=$('inNo').value.trim();
+  if(!name){ alert('이름을 입력하세요.'); return; }
+  if(!cls){ alert('반을 입력하세요.'); return; }
+  if(!no){ alert('번호를 입력하세요.'); return; }
+  newGame({grade:$('inGrade').value, cls, no, name, hero:$('inHero').value});
+};
+$('btnDex').onclick=()=>{ showScreen('screen-dex'); renderDex('monster'); };
+$('dexBack').onclick=()=>showScreen('screen-title');
+document.querySelectorAll('[data-dex]').forEach(b=>b.onclick=()=>renderDex(b.dataset.dex));
+$('btnHall').onclick=()=>{ showScreen('screen-hall'); renderHall(); };
+$('hallBack').onclick=()=>showScreen('screen-title');
+$('hallRefresh').onclick=()=>renderHall();
+$('btnHelp').onclick=()=>showScreen('screen-help');
+$('helpBack').onclick=()=>showScreen('screen-title');
+$('adminLink').onclick=()=>{ showScreen('screen-admin'); $('adminGate').style.display='block'; $('adminPanel').style.display='none'; $('adminPw').value=''; };
+$('adminBack').onclick=()=>showScreen('screen-title');
+$('adminEnter').onclick=()=>{ if($('adminPw').value===ADMIN_CODE){ $('adminGate').style.display='none'; $('adminPanel').style.display='block'; renderAdmin(); } else alert('접속 코드가 올바르지 않습니다.'); };
+$('adminPw').addEventListener('keydown',e=>{if(e.key==='Enter')$('adminEnter').click();});
+$('dlLeader').onclick=()=>{ const b=(A._board&&A._board.length)?A._board:DB.leader(); const rows=[['순위','학년','반','번호','이름','점수','정답률(%)','최종레벨','처치수','생존(초)','일시']];
+  b.forEach((r,i)=>rows.push([i+1,r.grade,r.cls,r.no,r.name,r.score,r.rate,r.level,r.kills,r.time,new Date(r.ts).toLocaleString()]));
+  downloadCSV('명예의전당_랭킹.csv',rows); };
+$('dlLog').onclick=()=>{ const l=(A._log&&A._log.length)?A._log:DB.log(); const rows=[['학년','반','번호','이름','진단영역','난이도','문항ID','정답여부','시간초과','소요(초)','일시']];
+  l.forEach(r=>rows.push([r.grade,r.cls,r.no,r.name,r.area,r.diff,r.id,r.correct?'O':'X',r.timedOut?'O':'',r.used,new Date(r.ts).toLocaleString()]));
+  downloadCSV('문항응답로그.csv',rows); };
+$('adminWipe').onclick=()=>{ if(confirm('이 기기에 저장된 로컬 랭킹·응답 데이터를 삭제할까요? (공유 전당 시트의 데이터는 지워지지 않습니다)')){ DB.wipe(); renderAdmin(); alert('이 기기 데이터 초기화 완료'); } };
+$('pausebtn').onclick=()=>{ if(!S||!S.running)return; S.paused=true; $('pauseWrap').classList.add('on'); };
+$('btnResumePlay').onclick=()=>{ $('pauseWrap').classList.remove('on'); S.paused=false; S.lastTs=performance.now(); };
+$('btnSaveQuit').onclick=()=>{ snapshot(); S.running=false; S=null; $('pauseWrap').classList.remove('on'); refreshTitle(); showScreen('screen-title'); };
+$('btnGiveUp').onclick=()=>{ $('pauseWrap').classList.remove('on'); S.paused=false; gameOver('포기'); };
+$('btnRetry').onclick=()=>{ showScreen('screen-enroll'); };
+$('btnHall2').onclick=()=>{ showScreen('screen-hall'); renderHall(); };
+$('btnTitle2').onclick=()=>{ refreshTitle(); showScreen('screen-title'); };
+
+function refreshTitle(){ $('resumeBox').style.display = DB.save()?'block':'none'; }
+refreshTitle();
+(function(){ const last=DB.save(); if(last&&last.info){ $('inClass').value=last.info.cls||''; $('inNo').value=last.info.no||''; $('inName').value=last.info.name||''; } })();
+</script>
+</body>
+</html>
