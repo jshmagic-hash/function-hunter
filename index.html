@@ -839,17 +839,17 @@ const BOSSES = [
     story:'다음 단원의 전조.'},
 ];
 const ITEMS = [
-  {id:'atk', name:'예리한 미지수', em:'🗡️', tier:'normal', desc:'공격력 +18%', apply:p=>p.atk*=1.18,
+  {id:'atk', name:'예리한 미지수', em:'🗡️', tier:'normal', desc:'공격력 +11%', apply:p=>p.atk*=1.11,
     story:'x를 갈아 만든 칼날.'},
-  {id:'hp', name:'상수 방패', em:'🛡️', tier:'normal', desc:'최대 체력 +25', apply:p=>{p.maxHp+=25;p.hp+=25;},
+  {id:'hp', name:'상수 방패', em:'🛡️', tier:'normal', desc:'최대 체력 +16', apply:p=>{p.maxHp+=16;p.hp+=16;},
     story:'변하지 않는 상수의 안정감.'},
-  {id:'spd', name:'기울기 부츠', em:'👟', tier:'normal', desc:'이동속도 +12%', apply:p=>p.moveSpeed*=1.12,
+  {id:'spd', name:'기울기 부츠', em:'👟', tier:'normal', desc:'이동속도 +8%', apply:p=>p.moveSpeed*=1.08,
     story:'경사를 미끄러지듯 달리는 신발.'},
-  {id:'as', name:'곱셈공식 장갑', em:'🧤', tier:'normal', desc:'공격속도 +15%', apply:p=>p.atkCd*=0.85,
+  {id:'as', name:'곱셈공식 장갑', em:'🧤', tier:'normal', desc:'공격속도 +10%', apply:p=>p.atkCd*=0.90,
     story:'빠르게 전개하여 연사 속도를 높인다.'},
-  {id:'rng', name:'정의역 렌즈', em:'🔭', tier:'normal', desc:'사정거리 +20%', apply:p=>p.range*=1.2,
+  {id:'rng', name:'정의역 렌즈', em:'🔭', tier:'normal', desc:'사정거리 +13%', apply:p=>p.range*=1.13,
     story:'더 넓은 정의역을 살피는 렌즈.'},
-  {id:'magnet_s', name:'작은 자석', em:'🧲', tier:'normal', desc:'경험치 자석 범위 +40%, 흡인력 +15%', apply:p=>{p.magnet*=1.4; p.magnetPull*=1.15;},
+  {id:'magnet_s', name:'작은 자석', em:'🧲', tier:'normal', desc:'경험치 자석 범위 +30%, 흡인력 +12%', apply:p=>{p.magnet*=1.3; p.magnetPull*=1.12;},
     story:'아이템을 끌어당기는 작은 자석.'},
   {id:'regen', name:'해의 물약', em:'🧪', tier:'rare', desc:'초당 체력 회복 +1.2', apply:p=>p.regen+=1.2,
     story:'방정식의 해처럼 잃은 것을 되찾아 준다.'},
@@ -885,7 +885,7 @@ const HEROES = {
 /* =========================================================
    게임 본체
    ========================================================= */
-const __CODE = "wjdtjdgns97!!";   // ★ 선생님 접속 코드 — 배포 전 원하는 코드로 바꾸세요 (화면에는 표시되지 않습니다)
+const ADMIN_CODE = "mathteacher";   // ★ 선생님 접속 코드 — 배포 전 원하는 코드로 바꾸세요 (화면에는 표시되지 않습니다)
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -1027,9 +1027,17 @@ function spawnEnemy(){
     color:m.color,em:m.em,rare:m.rare,boss:false,ang:0,walkT:Math.random()*100});
 }
 function spawnBoss(){
-  const b=BOSSES[S.bossIdx%BOSSES.length]; S.bossIdx++;
+  const b=BOSSES[S.bossIdx%BOSSES.length];
+  const cycle = Math.floor(S.bossIdx / BOSSES.length); // 한 바퀴 다 돌면 더 강해짐
+  S.bossIdx++;
   unlockDex('boss',b.id);
-  const e={type:b,id:b.id,x:W/2,y:-40,r:b.r,hp:b.hp,maxHp:b.hp,spd:b.spd*1.2,dmg:b.dmg,xp:b.xp,
+  const t=S.time/1000;
+  // 보스 강화: 기본 체력 상향(1.6배) + 시간/주기에 따른 추가 배수
+  const hpMul = 1.6 * (1 + t/200) * (1 + cycle*0.6);
+  const hp = Math.round(b.hp * hpMul);
+  const dmg = Math.round(b.dmg * (1.25 + cycle*0.3) + (t>90?(t-90)/30:0));
+  const spd = b.spd * (1.3 + Math.min(0.5, t/260));
+  const e={type:b,id:b.id,x:W/2,y:-40,r:b.r,hp,maxHp:hp,spd,dmg,xp:Math.round(b.xp*(1+cycle*0.3)),
     color:b.color,em:b.em,boss:true,bossData:b,walkT:0};
   S.enemies.push(e); S.boss=e;
   toast('💀 보스 '+b.name+' 등장!');
@@ -1191,23 +1199,15 @@ function onEnemyDeath(e){
   for(let i=0;i<6;i++) S.parts.push({x:e.x,y:e.y,vx:(Math.random()-.5)*6,vy:(Math.random()-.5)*6,life:20,color:e.color});
   const drops=e.boss?6:1;
   for(let i=0;i<drops;i++) S.orbs.push({x:e.x+(Math.random()-.5)*30,y:e.y+(Math.random()-.5)*30,v:Math.ceil(e.xp/drops),vx:0,vy:0});
-  if(e.boss){ S.boss=null; toast('보스 격파! 특별 보상 문제!'); setTimeout(()=>openQuiz(3,{boss:true}),450); }
+  if(e.boss){ S.boss=null; toast('보스 격파! 특별 보상 문제!'); const bd=Math.random()<0.5?2:3; setTimeout(()=>openQuiz(bd,{boss:true}),450); }
 }
 function addFloat(x,y,txt,color){ S.floats.push({x,y,txt,color,life:34}); }
 
 function gainXp(v){
   const pl=S.pl; pl.xp+=v;
   while(pl.xp>=pl.need){ pl.xp-=pl.need; pl.level++; pl.need=Math.floor(12+pl.level*7+pl.level*pl.level*1.1);
-    const lv=pl.level;
-    // 레벨이 오를수록 점점 어려운 문제가 나오도록 난이도 확률을 조정
-    let diff;
-    const r=Math.random();
-    if(lv<=2){ diff=1; }
-    else if(lv<=4){ diff = r<0.75?1:2; }
-    else if(lv<=6){ diff = r<0.45?1:2; }
-    else if(lv<=9){ diff = r<0.20?1: r<0.90?2:3; }
-    else { diff = r<0.65?2:3; }   // 후반: 적용~보스급 문제 위주
-    openQuiz(diff,{boss:false});
+    // 일반 레벨업 문제는 항상 난이도 '하'(기초 진단) 로 출제
+    openQuiz(1,{boss:false});
     break;
   }
 }
@@ -1736,12 +1736,29 @@ function openLevelChoices(correct,opts){
   const wrap=$('lvCards'); wrap.innerHTML='';
   let choices;
   if(correct){
-    const pool = (opts&&opts.boss) ? ITEMS.filter(i=>i.tier==='epic'||i.tier==='rare')
-                                   : ITEMS.filter(i=>i.tier==='rare'||(i.tier==='epic'&&Math.random()<0.5));
-    choices=pickN(pool,3);
-    if(choices.length<3) choices=choices.concat(pickN(ITEMS.filter(i=>!choices.includes(i)&&i.tier!=='weak'),3-choices.length));
-    $('lvTitle').textContent = '🎉 정답 보상!';
-    $('lvSub').textContent = '희귀·전설급 강화를 획득했습니다! (1~3 키로 선택)';
+    let pool;
+    if(opts&&opts.boss){
+      // 보스 정답 보상: 전설 위주 + 희귀 (강력하게, 전설 우선 정렬)
+      pool = ITEMS.filter(i=>i.tier==='epic'||i.tier==='rare');
+      choices = pickN(ITEMS.filter(i=>i.tier==='epic'),2)
+                  .concat(pickN(ITEMS.filter(i=>i.tier==='rare'),2));
+      choices = pickN(choices,3);
+      if(choices.length<3) choices = choices.concat(pickN(pool.filter(i=>!choices.includes(i)),3-choices.length));
+      $('lvTitle').textContent = '💀 보스 격파 보상!';
+      $('lvSub').textContent = '전설·희귀급 강화를 획득했습니다! (1~3 키로 선택)';
+    } else {
+      // 일반 레벨업 정답 보상: 보통 등급 위주, 가끔(25%) 희귀 1개 섞임 (스펙업 속도 완화)
+      const normals = ITEMS.filter(i=>i.tier==='normal');
+      if(Math.random()<0.25){
+        choices = pickN(ITEMS.filter(i=>i.tier==='rare'),1).concat(pickN(normals,2));
+      } else {
+        choices = pickN(normals,3);
+      }
+      choices = pickN(choices,3);
+      if(choices.length<3) choices = choices.concat(pickN(normals.filter(i=>!choices.includes(i)),3-choices.length));
+      $('lvTitle').textContent = '🎉 정답 보상!';
+      $('lvSub').textContent = '강화를 하나 골라 받으세요. (1~3 키로 선택)';
+    }
   } else {
     // 오답 → 약한 위로 아이템 '하나'만 지급 (선택지 없음)
     const weak = ITEMS.filter(i=>i.tier==='weak');
