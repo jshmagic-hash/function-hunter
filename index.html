@@ -128,6 +128,7 @@
   .lvcard p{margin:0;font-size:12px;color:var(--dim);line-height:1.45;}
   .lvcard .rk{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;}
   .rk.normal{color:#bcd;background:#2a3550;} .rk.rare{color:#08120c;background:var(--rare);} .rk.epic{color:#3a2600;background:var(--gold);}
+  .rk.weak{color:#ddd;background:#4a3a3a;}
   .lvtitle{text-align:center;font-weight:900;font-size:20px;margin:0 0 4px;}
   .lvsub{text-align:center;color:var(--dim);font-size:13px;margin:0 0 14px;}
 
@@ -337,7 +338,7 @@
       <div class="qhead"><h2 style="margin:0">❓ 플레이 방법</h2><button class="btn ghost sm" id="helpBack" style="width:auto">← 닫기</button></div>
       <div class="hint" style="line-height:1.7;font-size:13.5px;">
         <p><b>1. 자동 사냥</b> — 캐릭터는 가장 가까운 적을 향해 <b>자동으로 공격</b>합니다. 몬스터는 플레이어를 향해 곧장 다가옵니다. <b>WASD / 방향키</b>(모바일은 왼쪽 조이스틱)로 이동하며 피하세요.</p>
-        <p><b>2. 레벨업 = 수학 시간!</b> — 경험치가 차면 <b>수학 문제</b>가 등장합니다. <b>맞히면 희귀·전설급 강화</b>를, 틀리면 보통 등급 강화만 받습니다. 보기와 강화 카드는 <b>키보드 1·2·3·4</b> 로도 고를 수 있어요. <b>제한시간은 없으니</b> 충분히 생각하고 푸세요.</p>
+        <p><b>2. 레벨업 = 수학 시간!</b> — 경험치가 차면 <b>수학 문제</b>가 등장합니다. <b>맞히면 희귀·전설급 강화</b>를 골라서 받고, <b>틀리면 약한 보상 하나</b>만 받습니다. 보기와 강화 카드는 <b>키보드 1·2·3·4</b> 로도 고를 수 있어요. <b>제한시간은 없으니</b> 충분히 생각하고 푸세요.</p>
         <p><b>3. 자석 효과</b> — 드랍 아이템은 가까이 가면 자동으로 끌려옵니다. 자석 아이템을 얻으면 흡인 범위가 더 넓어져요!</p>
         <p><b>4. 숲의 모험</b> — 깊은 숲에서 펼쳐지는 함수 사냥. 풀잎과 꽃이 흩날리는 무대 위에서 몬스터를 처치하세요. 레벨이 오를수록 적은 <b>점점 빨라지고</b> 문제도 <b>점점 어려워집니다</b>.</p>
         <p><b>5. 보스전</b> — 일정 시간마다 보스가 등장하고, 특별 문제가 나옵니다.</p>
@@ -739,22 +740,17 @@ const DB = {
      비워두면 기존처럼 이 기기에만 저장됩니다(로컬 모드).
      설정 방법은 함께 드린 안내문(가이드)을 참고하세요.
    ========================================================= */
-const CLOUD_URL = ""; // 예: "https://script.google.com/macros/s/AKfy.../exec"
+const CLOUD_URL = "https://script.google.com/macros/s/AKfycbz6caD9UJXO4tvJSMX4U4GR5mFEcXAoZPslg0pai6xWi75ZJC4LPE7UHFLGzdImp6HnhA/exec"; // 예: "https://script.google.com/macros/s/AKfy.../exec"
 const Cloud = {
   get enabled(){ return typeof CLOUD_URL==='string' && /^https:\/\/script\.google\.com\/macros\/s\//.test(CLOUD_URL); },
   // 점수 기록 + 문항 응답 로그 전송 (실패해도 게임 진행에 영향 없음)
   async submit(rec, qLog){
     if(!this.enabled) return false;
     const payload = JSON.stringify({type:'submit', rec, log:qLog||[]});
-    // 1차: 일반 요청(text/plain → CORS preflight 없음). 응답을 읽어 성공 여부를 확인한다.
+    // Apps Script 는 CORS 응답 헤더를 주지 않으므로, 쓰기는 no-cors 로 보낸다.
+    // (응답 본문은 못 읽지만 전송은 확실히 이뤄진다. keepalive 로 화면 전환에도 살아남음)
     try{
-      const res = await fetch(CLOUD_URL, { method:'POST', redirect:'follow',
-        headers:{'Content-Type':'text/plain;charset=utf-8'}, body: payload });
-      if(res && res.ok){ try{ const j=await res.json(); if(j && j.ok!==false) return true; }catch(_){ return true; } }
-    }catch(e){ /* 아래 폴백 시도 */ }
-    // 2차 폴백: no-cors (응답은 못 읽지만 전송은 시도됨)
-    try{
-      await fetch(CLOUD_URL, { method:'POST', mode:'no-cors',
+      await fetch(CLOUD_URL, { method:'POST', mode:'no-cors', keepalive:true,
         headers:{'Content-Type':'text/plain;charset=utf-8'}, body: payload });
       return true;
     }catch(e){ return false; }
@@ -865,12 +861,19 @@ const ITEMS = [
     story:'약점을 간파해 두 배의 피해.'},
   {id:'big', name:'완전제곱의 핵', em:'💥', tier:'epic', desc:'공격력 +35% & 탄 크기 +30%', apply:p=>{p.atk*=1.35;p.projR*=1.3;},
     story:'(x+a)²처럼 완벽하게 응축된 파괴의 핵.'},
-  {id:'aura', name:'근의 공식 오라', em:'🌀', tier:'epic', desc:'주변 적에게 지속 피해 오라', apply:p=>{p.aura=Math.max(p.aura,1);p.auraDmg+=4;},
+  {id:'aura', name:'근의 공식 오라', em:'🌀', tier:'epic', desc:'주변 적에게 강력한 지속 피해 (범위·피해 증가)', apply:p=>{p.aura=Math.max(p.aura,1);p.auraDmg+=11;p.auraR+=28;},
     story:'주위를 맴도는 신비한 공식의 힘.'},
   {id:'magnet', name:'무한대의 자석', em:'🧲', tier:'epic', desc:'경험치 자석 범위 +120%, 흡인력 2배', apply:p=>{p.magnet*=2.2; p.magnetPull*=2.0;},
     story:'멀리 있는 경험치까지 빨아들이는 자석.'},
   {id:'vamp', name:'흡수하는 미지수', em:'🩸', tier:'epic', desc:'공격 시 체력 흡수', apply:p=>p.lifesteal+=0.06,
     story:'적의 값을 흡수해 자신의 체력으로 바꾼다.'},
+  // ── 오답 시 주어지는 약한 보상(위로 아이템) ──
+  {id:'scrap_atk', name:'무딘 미지수 조각', em:'🪨', tier:'weak', desc:'공격력 +4% (약한 보상)', apply:p=>p.atk*=1.04,
+    story:'정답을 놓쳤다… 작은 조각이지만 없는 것보단 낫다.'},
+  {id:'scrap_hp', name:'금이 간 상수 조각', em:'🧱', tier:'weak', desc:'최대 체력 +6 (약한 보상)', apply:p=>{p.maxHp+=6;p.hp+=6;},
+    story:'깨진 방패 조각. 다음엔 꼭 맞혀 더 좋은 보상을 받자.'},
+  {id:'scrap_spd', name:'닳은 기울기 조각', em:'🥾', tier:'weak', desc:'이동속도 +3% (약한 보상)', apply:p=>p.moveSpeed*=1.03,
+    story:'살짝 닳은 부츠 밑창. 미미하지만 도움은 된다.'},
 ];
 const HEROES = {
   warrior:{name:'검사', em:'⚔️', maxHp:120, atk:11, atkCd:46, moveSpeed:2.6, range:150, shots:1, projSpeed:6.5, weapon:'sword', skin:{body:'#3ab87a',head:'#ffd9b4',cape:'#c43b3b'}},
@@ -882,7 +885,7 @@ const HEROES = {
 /* =========================================================
    게임 본체
    ========================================================= */
-const ADMIN_CODE = "teacher";   // ★ 선생님 접속 코드 — 배포 전 원하는 코드로 바꾸세요 (화면에는 표시되지 않습니다)
+const __CODE = "wjdtjdgns97!!";   // ★ 선생님 접속 코드 — 배포 전 원하는 코드로 바꾸세요 (화면에는 표시되지 않습니다)
 const $ = id => document.getElementById(id);
 const cv = $('cv'), ctx = cv.getContext('2d');
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
@@ -947,8 +950,8 @@ function freshPlayer(heroId){
     moveSpeed:h.moveSpeed,range:h.range,shots:h.shots||1,projSpeed:h.projSpeed,projR:6,
     pierce:h.pierce||0,crit:0,regen:h.regen||0,lifesteal:0,
     magnet:90, magnetPull:1.0,
-    aura:0,auraDmg:0,auraT:0,
-    level:1,xp:0,need:6,kills:0,hurtCd:0,
+    aura:0,auraDmg:0,auraT:0,auraR:104,
+    level:1,xp:0,need:12,kills:0,hurtCd:0,
     facing:1, walkT:0};
 }
 
@@ -984,7 +987,7 @@ function mulberry32(seed){
 
 function newGame(info){
   showScreen('screen-game'); resize();
-  S={info, pl:freshPlayer(info.hero), enemies:[],projs:[],orbs:[],parts:[],floats:[],
+  S={info, pl:freshPlayer(info.hero), enemies:[],projs:[],eprojs:[],orbs:[],parts:[],floats:[],
      time:0,spawnT:1600,spawnInt:1900,bossT:18000,bossIdx:0,boss:null,
      running:true,paused:false,score:0,quizCount:0,quizCorrect:0,qLog:[],
      lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
@@ -1014,9 +1017,13 @@ function spawnEnemy(){
   const side=Math.floor(Math.random()*4); let x,y;
   if(side===0){x=Math.random()*W;y=-20;} else if(side===1){x=W+20;y=Math.random()*H;}
   else if(side===2){x=Math.random()*W;y=H+20;} else {x=-20;y=Math.random()*H;}
-  const scale=1+t/120;
-  const spdMul = 1.28 + Math.min(0.4, t/300);  // 기본 빠르게 + 시간에 따라 점점 더 빠르게
-  S.enemies.push({type:m,id:m.id,x,y,r:m.r,hp:m.hp*scale,maxHp:m.hp*scale,spd:m.spd*spdMul,dmg:m.dmg,xp:m.xp,
+  // 체력: 중반(60초)부터 가파르게 상승. 90초 이후엔 더 강해짐.
+  const hpScale = 1 + t/80 + Math.max(0, (t-60)/45) + Math.max(0,(t-120)/60);
+  // 속도: 기본 빠르게 + 시간이 갈수록 더 빠르게(상한 높임)
+  const spdMul = 1.35 + Math.min(0.7, t/220);
+  const hp = Math.round(m.hp*hpScale);
+  const dmg = m.dmg + (t>90?Math.floor((t-90)/45):0);  // 후반엔 접촉 피해도 조금 증가
+  S.enemies.push({type:m,id:m.id,x,y,r:m.r,hp,maxHp:hp,spd:m.spd*spdMul,dmg,xp:m.xp,
     color:m.color,em:m.em,rare:m.rare,boss:false,ang:0,walkT:Math.random()*100});
 }
 function spawnBoss(){
@@ -1049,8 +1056,8 @@ function update(dt){
   if(pl.hurtCd>0) pl.hurtCd-=dt;
 
   S.spawnT-=dt*16.667;
-  if(S.spawnT<=0){
-    const cap = 34;  // 동시 등장 상한 (렉 방지) — 보스 제외
+  if(S.spawnT<=0 && !S.boss){   // 보스가 살아있는 동안에는 잡몹이 나오지 않음
+    const cap = 30;  // 동시 등장 상한 (렉 방지) — 보스 제외
     const alive = S.enemies.reduce((c,e)=>c+(e.boss?0:1),0);
     if(alive < cap){
       const n=1+Math.floor(S.time/60000); // 등장 수 증가를 더 천천히
@@ -1079,8 +1086,9 @@ function update(dt){
       pl.cd=pl.atkCd;
     }
   }
-  if(pl.aura){ pl.auraT-=dt; if(pl.auraT<=0){ pl.auraT=20;
-    for(const e of S.enemies){ if(dist2(e,pl) < (90*90)){ hitEnemy(e, pl.auraDmg, false); } } } }
+  if(pl.aura){ pl.auraT-=dt; if(pl.auraT<=0){ pl.auraT=12;   // 더 자주 피해
+    const R2=pl.auraR*pl.auraR;
+    for(const e of S.enemies){ if(dist2(e,pl) < R2){ hitEnemy(e, pl.auraDmg, false); } } } }
 
   // 발사체
   for(const p of S.projs){
@@ -1107,6 +1115,23 @@ function update(dt){
     e.y += (dy/d)*e.spd*dt;
     e.walkT = (e.walkT||0) + dt;
 
+    // 보스는 플레이어를 향해 탄환을 발사한다
+    if(e.boss){
+      e.fireCd = (e.fireCd==null? 70 : e.fireCd) - dt;
+      if(e.fireCd<=0){
+        e.fireCd = 78;
+        const t=S.time/1000;
+        const bdmg = Math.max(6, Math.round(e.dmg*0.6));   // 보스 탄환 피해
+        const bspd = 3.4 + Math.min(2.2, t/120);
+        // 후반 보스는 3갈래로 발사
+        const ways = t>90?3:1, spread=0.26;
+        for(let k=0;k<ways;k++){
+          const a=e.ang + (k-(ways-1)/2)*spread;
+          S.eprojs.push({x:e.x, y:e.y, vx:Math.cos(a)*bspd, vy:Math.sin(a)*bspd, r:8, dmg:bdmg, life:160, color:e.color||'#ff5470'});
+        }
+      }
+    }
+
     const rr=e.r+pl.r;
     if(dist2(e,pl)<rr*rr && pl.hurtCd<=0){
       pl.hp-=e.dmg; pl.hurtCd=36;
@@ -1114,6 +1139,18 @@ function update(dt){
       if(pl.hp<=0){ pl.hp=0; return gameOver('패배'); }
     }
   }
+
+  // 적(보스) 발사체 이동 + 플레이어 피격
+  for(const p of S.eprojs){
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
+    const rr=p.r+pl.r;
+    if(dist2(p,pl)<rr*rr && pl.hurtCd<=0){
+      pl.hp-=p.dmg; pl.hurtCd=24; p.life=0;
+      addFloat(pl.x,pl.y-20,'-'+p.dmg,'#ff8a3d');
+      if(pl.hp<=0){ pl.hp=0; return gameOver('패배'); }
+    }
+  }
+  S.eprojs=S.eprojs.filter(p=>p.life>0 && p.x>-40&&p.x<W+40&&p.y>-40&&p.y<H+40);
   for(const e of S.enemies){ if(e._dead){ onEnemyDeath(e); } }
   S.enemies=S.enemies.filter(e=>!e._dead);
 
@@ -1160,7 +1197,7 @@ function addFloat(x,y,txt,color){ S.floats.push({x,y,txt,color,life:34}); }
 
 function gainXp(v){
   const pl=S.pl; pl.xp+=v;
-  while(pl.xp>=pl.need){ pl.xp-=pl.need; pl.level++; pl.need=Math.floor(6+pl.level*4+pl.level*pl.level*0.5);
+  while(pl.xp>=pl.need){ pl.xp-=pl.need; pl.level++; pl.need=Math.floor(12+pl.level*7+pl.level*pl.level*1.1);
     const lv=pl.level;
     // 레벨이 오를수록 점점 어려운 문제가 나오도록 난이도 확률을 조정
     let diff;
@@ -1291,14 +1328,28 @@ function render(){
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
     ctx.restore();
   }
+  // 적(보스) 발사체
+  for(const p of S.eprojs){
+    ctx.save(); ctx.shadowBlur=14; ctx.shadowColor='#ff3b66';
+    ctx.fillStyle='#ff5470';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
+    ctx.fillStyle='#ffd0da';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*0.45,0,7); ctx.fill();
+    ctx.restore();
+  }
 
   // 플레이어
   drawPlayer(pl);
 
   // 오라
   if(pl.aura){
-    ctx.save(); ctx.globalAlpha=.18; ctx.fillStyle='#c46bff';
-    ctx.beginPath(); ctx.arc(pl.x,pl.y,90,0,7); ctx.fill(); ctx.restore();
+    const R=pl.auraR||104;
+    ctx.save();
+    ctx.globalAlpha=.16; ctx.fillStyle='#c46bff';
+    ctx.beginPath(); ctx.arc(pl.x,pl.y,R,0,7); ctx.fill();
+    ctx.globalAlpha=.5; ctx.lineWidth=2; ctx.strokeStyle='#d79bff';
+    ctx.beginPath(); ctx.arc(pl.x,pl.y,R,0,7); ctx.stroke();
+    ctx.restore();
   }
 
   for(const p of S.parts){
@@ -1682,17 +1733,26 @@ function resolveQuiz(correct,timedOut,chosenIdx){
 
 function pickN(arr,n){ const a=arr.slice(); const out=[]; while(out.length<n && a.length){ out.push(a.splice(Math.floor(Math.random()*a.length),1)[0]); } return out; }
 function openLevelChoices(correct,opts){
-  const pool = correct
-    ? (opts&&opts.boss ? ITEMS.filter(i=>i.tier==='epic'||i.tier==='rare')
-                       : ITEMS.filter(i=>i.tier==='rare'||(i.tier==='epic'&&Math.random()<0.5)) )
-    : ITEMS.filter(i=>i.tier==='normal');
-  let choices=pickN(pool,3); if(choices.length<3) choices=choices.concat(pickN(ITEMS.filter(i=>!choices.includes(i)),3-choices.length));
-  $('lvTitle').textContent = correct? '🎉 정답 보상!' : '강화 선택';
-  $('lvSub').textContent = correct? '희귀·전설급 강화를 획득했습니다!' : '보통 등급 강화 중 하나를 고르세요';
   const wrap=$('lvCards'); wrap.innerHTML='';
+  let choices;
+  if(correct){
+    const pool = (opts&&opts.boss) ? ITEMS.filter(i=>i.tier==='epic'||i.tier==='rare')
+                                   : ITEMS.filter(i=>i.tier==='rare'||(i.tier==='epic'&&Math.random()<0.5));
+    choices=pickN(pool,3);
+    if(choices.length<3) choices=choices.concat(pickN(ITEMS.filter(i=>!choices.includes(i)&&i.tier!=='weak'),3-choices.length));
+    $('lvTitle').textContent = '🎉 정답 보상!';
+    $('lvSub').textContent = '희귀·전설급 강화를 획득했습니다! (1~3 키로 선택)';
+  } else {
+    // 오답 → 약한 위로 아이템 '하나'만 지급 (선택지 없음)
+    const weak = ITEMS.filter(i=>i.tier==='weak');
+    choices=[ weak[Math.floor(Math.random()*weak.length)] ];
+    $('lvTitle').textContent = '오답… 약한 보상';
+    $('lvSub').textContent = '아쉽지만 이번엔 약한 보상 하나만 받습니다.';
+  }
   choices.forEach((it,ci)=>{ const c=document.createElement('div'); c.className='lvcard';
-    const rk = it.tier==='epic'?'epic':it.tier==='rare'?'rare':'normal';
-    c.innerHTML=`<span class="keytag lvkey">${ci+1}</span><span class="rk ${rk}">${it.tier==='epic'?'전설':it.tier==='rare'?'희귀':'보통'}</span>
+    const rk = it.tier==='epic'?'epic':it.tier==='rare'?'rare':it.tier==='weak'?'weak':'normal';
+    const rkLabel = it.tier==='epic'?'전설':it.tier==='rare'?'희귀':it.tier==='weak'?'약함':'보통';
+    c.innerHTML=`<span class="keytag lvkey">${ci+1}</span><span class="rk ${rk}">${rkLabel}</span>
       <div class="ic">${it.em}</div><h4>${it.name}</h4><p>${it.desc}</p>`;
     c.onclick=()=>{ it.apply(S.pl); unlockDex('item',it.id); $('levelWrap').classList.remove('on'); S.paused=false; S.lastTs=performance.now(); toast(it.em+' '+it.name+' 획득!'); };
     wrap.appendChild(c); });
@@ -1817,7 +1877,7 @@ function snapshot(){ if(!S)return; const pl=S.pl;
     qLog:S.qLog,bossIdx:S.bossIdx,pl:{...pl}}); }
 function loadSave(){ const s=DB.save(); if(!s)return false;
   showScreen('screen-game'); resize();
-  S={info:s.info,pl:s.pl,enemies:[],projs:[],orbs:[],parts:[],floats:[],
+  S={info:s.info,pl:s.pl,enemies:[],projs:[],eprojs:[],orbs:[],parts:[],floats:[],
      time:s.time,spawnT:0,spawnInt:1900,bossT:20000,bossIdx:s.bossIdx||0,boss:null,
      running:true,paused:false,score:s.score,quizCount:s.quizCount,quizCorrect:s.quizCorrect,qLog:s.qLog||[],
      lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
