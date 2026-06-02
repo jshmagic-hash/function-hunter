@@ -202,10 +202,10 @@
       <label class="fld"><span>이름</span><input id="inName" placeholder="홍길동" maxlength="10"></label>
       <label class="fld"><span>캐릭터 선택</span>
         <select id="inHero">
-          <option value="warrior">⚔️ 검사 — 균형형 (체력+공격)</option>
-          <option value="mage">🔮 마법사 — 공격 특화 (관통)</option>
-          <option value="ranger">🏹 궁수 — 다중 사격 (속사)</option>
-          <option value="guardian">🛡️ 수호자 — 생존 특화 (높은 체력)</option>
+          <option value="warrior">⚔️ 검사 — 균형형 (튼튼·빠른 공격·치명타)</option>
+          <option value="mage">🔮 마법사 — 한 방·관통·긴 사거리 (체력 약함)</option>
+          <option value="ranger">🏹 궁수 — 빠른 2연발·기동력 (한 발은 약함)</option>
+          <option value="guardian">🛡️ 수호자 — 최고 체력·재생으로 버티기</option>
         </select>
       </label>
       <div class="row" style="margin-top:10px;">
@@ -345,10 +345,10 @@
       <div class="qhead"><h2 style="margin:0">❓ 플레이 방법</h2><button class="btn ghost sm" id="helpBack" style="width:auto">← 닫기</button></div>
       <div class="hint" style="line-height:1.7;font-size:13.5px;">
         <p><b>1. 자동 사냥</b> — 캐릭터는 가장 가까운 적을 향해 <b>자동으로 공격</b>합니다. 몬스터는 플레이어를 향해 곧장 다가옵니다. <b>WASD / 방향키</b>(모바일은 왼쪽 조이스틱)로 이동하며 피하세요.</p>
-        <p><b>2. 레벨업 = 수학 시간!</b> — 경험치가 차면 <b>수학 문제</b>가 등장합니다. <b>맞히면 희귀·전설급 강화</b>를 골라서 받고, <b>틀리면 약한 보상 하나</b>만 받습니다. 보기와 강화 카드는 <b>키보드 1·2·3·4</b> 로도 고를 수 있어요. <b>제한시간은 없으니</b> 충분히 생각하고 푸세요.</p>
+        <p><b>2. 레벨업 = 수학 시간!</b> — 경험치가 차면 <b>수학 문제</b>가 등장합니다. <b>맞히면 희귀·전설급 강화</b>를 골라서 받고, <b>틀리면 약한 보상 하나</b>만 받습니다. 보기와 강화 카드는 <b>키보드 1·2·3·4</b> 로 고를 수 있고, <b>엔터</b>로도 진행·보상 선택(첫 번째 카드)이 됩니다. <b>제한시간은 없으니</b> 충분히 생각하고 푸세요.</p>
         <p><b>3. 자석 효과</b> — 드랍 아이템은 가까이 가면 자동으로 끌려옵니다. 자석 아이템을 얻으면 흡인 범위가 더 넓어져요!</p>
         <p><b>4. 바다의 모험</b> — 깊은 바닷속에서 펼쳐지는 함수 사냥. 해초와 산호, 거품이 흔들리는 무대 위에서 몬스터를 처치하세요. 적이 떨어뜨리는 <b>❤️ 하트를 먹으면 체력이 회복</b>됩니다. 레벨이 오를수록 적은 <b>점점 빨라지고</b> 문제도 <b>점점 어려워집니다</b>.</p>
-        <p><b>5. 보스전</b> — 일정 시간마다 보스가 등장하고, 특별 문제가 나옵니다.</p>
+        <p><b>5. 보스전</b> — 일정 시간마다 보스가 등장하고, 보스전 동안에는 보스만 상대합니다. 보스를 잡으면 특별 문제가 나옵니다. <b>뒤로 갈수록 보스의 공격 패턴이 점점 다양하고 화려해지니</b>(부채꼴·원형·나선·꽃 탄막 등) 잘 피하세요!</p>
         <p><b>출제 범위</b> — 일차함수(함수값·기울기·대입·<b>좌표·그래프 읽기·절편</b>), 이차방정식(인수분해·전개·해 구하기). <i>이차함수의 그래프·꼭짓점은 출제되지 않습니다.</i></p>
       </div>
     </div>
@@ -636,12 +636,12 @@
   // [2] 점이 어느 사분면에 있는가
   G('quad','사분면 찾기',1,30,'mc',()=>{
     const x=Rn0(-4,4), y=Rn0(-4,4);
-    const Q = x>0&&y>0?'제1사분면': x<0&&y>0?'제2사분면': x<0&&y<0?'제3사분면':'제4사분면';
-    const opt=mc(Q, ['제1사분면','제2사분면','제3사분면','제4사분면'].filter(z=>z!==Q));
+    const qi = x>0&&y>0?0 : x<0&&y>0?1 : x<0&&y<0?2 : 3;   // 0=1사분면 ... 3=4사분면
+    const choices=['제1사분면','제2사분면','제3사분면','제4사분면'];   // 보기는 항상 1→4 순서 고정
     return {
       q:`점 <span class="mono">(${x}, ${y})</span> 는 어느 사분면에 있는가?${grid({pts:[{x,y,label:'',c:'#5af7ff'}]})}`,
-      choices:opt.choices, answerIndex:opt.answerIndex,
-      explain:`x${x>0?'>':'<'}0, y${y>0?'>':'<'}0 이므로 ${Q}`,
+      choices, answerIndex:qi,
+      explain:`x${x>0?'>':'<'}0, y${y>0?'>':'<'}0 이므로 ${choices[qi]}`,
     };
   });
 
@@ -812,8 +812,8 @@ const MONSTERS = [
     story:'일정한 비율로 가속한다. 직선처럼 곧장 달려온다.'},
   {id:'golem', name:'계수 골렘', em:'🗿', color:'#b0a3c8', hp:40, spd:.4, dmg:13, xp:11, r:18,
     story:'커다란 계수를 짊어진 골렘. 느리지만 한 방이 묵직하다.'},
-  {id:'eye', name:'판별식의 눈', em:'👁️', color:'#7af7ff', hp:22, spd:.65, dmg:9, xp:9, r:13,
-    story:'해가 있는지 없는지를 꿰뚫어 본다.'},
+  {id:'eye', name:'꿰뚫는 눈', em:'👁️', color:'#7af7ff', hp:22, spd:.65, dmg:9, xp:9, r:13,
+    story:'약점을 꿰뚫어 보는 외눈의 감시자.'},
   {id:'snake', name:'곱셈공식 뱀', em:'🐍', color:'#39f4a8', hp:28, spd:.85, dmg:10, xp:10, r:14,
     story:'(a+b)처럼 길게 늘어나 휘감는다.'},
   {id:'knight', name:'인수분해 기사', em:'⚔️', color:'#e0c070', hp:46, spd:.6, dmg:14, xp:14, r:16,
@@ -854,8 +854,8 @@ const ITEMS = [
     story:'경사를 미끄러지듯 달리는 신발.'},
   {id:'as', name:'곱셈공식 장갑', em:'🧤', tier:'normal', desc:'공격속도 +10%', apply:p=>p.atkCd*=0.90,
     story:'빠르게 전개하여 연사 속도를 높인다.'},
-  {id:'rng', name:'정의역 렌즈', em:'🔭', tier:'normal', desc:'사정거리 +13%', apply:p=>p.range*=1.13,
-    story:'더 넓은 정의역을 살피는 렌즈.'},
+  {id:'rng', name:'좌표 망원경', em:'🔭', tier:'normal', desc:'사정거리 +13%', apply:p=>p.range*=1.13,
+    story:'더 멀리 있는 적까지 살피는 망원경.'},
   {id:'magnet_s', name:'작은 자석', em:'🧲', tier:'normal', desc:'경험치 자석 범위 +30%, 흡인력 +12%', apply:p=>{p.magnet*=1.3; p.magnetPull*=1.12;},
     story:'아이템을 끌어당기는 작은 자석.'},
   {id:'regen', name:'해의 물약', em:'🧪', tier:'rare', desc:'초당 체력 회복 +0.6', apply:p=>p.regen+=0.6,
@@ -864,7 +864,7 @@ const ITEMS = [
     story:'근이 둘이듯, 화살도 둘.'},
   {id:'pierce', name:'관통하는 인수', em:'➤', tier:'rare', desc:'관통 +1', apply:p=>p.pierce+=1,
     story:'인수분해된 칼날이 적을 통과한다.'},
-  {id:'crit', name:'판별식의 눈동자', em:'👁️', tier:'rare', desc:'치명타 확률 +15%', apply:p=>p.crit+=0.15,
+  {id:'crit', name:'간파의 눈동자', em:'👁️', tier:'rare', desc:'치명타 확률 +15%', critItem:true, apply:p=>p.crit+=0.15,
     story:'약점을 간파해 두 배의 피해.'},
   {id:'big', name:'완전제곱의 핵', em:'💥', tier:'epic', desc:'공격력 +60% · 탄 크기 +45% · 공속 +10%', apply:p=>{p.atk*=1.6;p.projR*=1.45;p.atkCd*=0.90;},
     story:'(x+a)²처럼 완벽하게 응축된 파괴의 핵. 한 방이 묵직해진다.'},
@@ -876,8 +876,8 @@ const ITEMS = [
     story:'적의 값을 흡수해 자신의 체력으로 바꾼다. 싸울수록 단단해진다.'},
   {id:'twin', name:'중근의 분신', em:'✥', tier:'epic', desc:'발사체 +2 · 관통 +1', apply:p=>{p.shots+=2;p.pierce+=1;},
     story:'중근처럼 겹쳐 나타난 두 갈래의 탄막.'},
-  {id:'overdrive', name:'판별식 폭주', em:'⚡', tier:'epic', desc:'공속 +30% · 치명타 +20% · 사정거리 +15%', apply:p=>{p.atkCd*=0.70;p.crit+=0.20;p.range*=1.15;},
-    story:'b²-4ac가 폭주하며 공격을 가속한다.'},
+  {id:'overdrive', name:'계산 폭주', em:'⚡', tier:'epic', desc:'공속 +30% · 치명타 +20% · 사정거리 +15%', critItem:true, apply:p=>{p.atkCd*=0.70;p.crit+=0.20;p.range*=1.15;},
+    story:'번개처럼 빠른 계산으로 공격을 가속한다.'},
   // ── 오답 시 주어지는 약한 보상(위로 아이템) ──
   {id:'scrap_atk', name:'무딘 미지수 조각', em:'🪨', tier:'weak', desc:'공격력 +4% (약한 보상)', apply:p=>p.atk*=1.04,
     story:'정답을 놓쳤다… 작은 조각이지만 없는 것보단 낫다.'},
@@ -887,10 +887,14 @@ const ITEMS = [
     story:'살짝 닳은 부츠 밑창. 미미하지만 도움은 된다.'},
 ];
 const HEROES = {
-  warrior:{name:'검사', em:'⚔️', maxHp:120, atk:11, atkCd:46, moveSpeed:2.6, range:150, shots:1, projSpeed:6.5, weapon:'sword', skin:{body:'#2ea1c4',head:'#ffe0c2',cape:'#1f6f97'}},
-  mage:   {name:'마법사', em:'🔮', maxHp:88,  atk:15, atkCd:52, moveSpeed:2.5, range:190, shots:1, projSpeed:7.5, pierce:1, weapon:'staff', skin:{body:'#4f8df0',head:'#ffe0c2',cape:'#274aa8'}},
-  ranger: {name:'궁수', em:'🏹', maxHp:96,  atk:8,  atkCd:30, moveSpeed:2.8, range:170, shots:2, projSpeed:8, weapon:'bow', skin:{body:'#2bb38a',head:'#ffe0c2',cape:'#1c7d63'}},
-  guardian:{name:'수호자', em:'🛡️', maxHp:170, atk:9,  atkCd:50, moveSpeed:2.4, range:140, shots:1, projSpeed:6, regen:0.6, weapon:'shield', skin:{body:'#5a86b8',head:'#ffe0c2',cape:'#324f74'}},
+  // 균형형 전사: 든든한 체력 + 빠른 근접 스윙, 약간의 치명타. 무난하게 강함.
+  warrior:{name:'검사', em:'⚔️', maxHp:135, atk:14, atkCd:40, moveSpeed:2.6, range:150, shots:1, projSpeed:6.8, crit:0.08, weapon:'sword', skin:{body:'#2ea1c4',head:'#ffe0c2',cape:'#1f6f97'}},
+  // 한 방 + 관통형 마법사: 높은 단발 피해와 긴 사정거리, 관통. 대신 체력이 약함.
+  mage:   {name:'마법사', em:'🔮', maxHp:92,  atk:17, atkCd:48, moveSpeed:2.5, range:195, shots:1, projSpeed:7.8, pierce:1, weapon:'staff', skin:{body:'#4f8df0',head:'#ffe0c2',cape:'#274aa8'}},
+  // 연사·기동형 궁수: 빠른 2연발과 기동력. 발당 피해는 가장 낮아 균형을 맞춤.
+  ranger: {name:'궁수', em:'🏹', maxHp:100, atk:7,  atkCd:33, moveSpeed:2.85, range:175, shots:2, projSpeed:8, weapon:'bow', skin:{body:'#2bb38a',head:'#ffe0c2',cape:'#1c7d63'}},
+  // 탱커형 수호자: 최고 체력 + 재생. 공격력도 쓸 만하게 올려 끝까지 버티며 싸움.
+  guardian:{name:'수호자', em:'🛡️', maxHp:185, atk:13, atkCd:46, moveSpeed:2.45, range:148, shots:1, projSpeed:6.2, regen:0.9, weapon:'shield', skin:{body:'#5a86b8',head:'#ffe0c2',cape:'#324f74'}},
 };
 
 /* =========================================================
@@ -914,10 +918,27 @@ const keys={};
 window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true; });
 window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
 
-// 숫자키 1~4 단축키: 퀴즈 보기 선택 / 강화 카드 선택
+// 숫자키 1~4 단축키: 퀴즈 보기 선택 / 강화 카드 선택, 엔터: 진행/보상 선택
 window.addEventListener('keydown',e=>{
-  // 단답형 입력칸에 타이핑 중일 때는 숫자를 그대로 입력하도록 무시
-  if(document.activeElement && document.activeElement.id==='qInput') return;
+  // 단답형 입력칸에 타이핑 중일 때는 숫자를 그대로 입력하도록 무시 (엔터는 제출에 쓰이므로 그대로 둠)
+  const typingShort = document.activeElement && document.activeElement.id==='qInput';
+
+  // 엔터: ① 보상/강화 카드가 떠 있으면 첫 번째 카드 선택, ② 채점 결과의 '다음' 버튼 진행
+  if(e.key==='Enter'){
+    const lv=$('levelWrap');
+    if(lv && lv.classList.contains('on')){
+      const cards=$('lvCards').children;
+      if(cards.length){ e.preventDefault(); cards[0].click(); }
+      return;
+    }
+    const nextBtn=$('qNext');
+    if(nextBtn && document.body.contains(nextBtn) && $('quizWrap').classList.contains('on')){
+      e.preventDefault(); nextBtn.click(); return;
+    }
+    return;
+  }
+
+  if(typingShort) return;
   const map={'1':0,'2':1,'3':2,'4':3};
   if(!(e.key in map)) return;
   const idx=map[e.key];
@@ -959,7 +980,7 @@ function freshPlayer(heroId){
   return {x:W/2,y:H/2,r:19,hero:heroId,em:h.em,
     hp:h.maxHp,maxHp:h.maxHp,atk:h.atk,atkCd:h.atkCd,cd:0,
     moveSpeed:h.moveSpeed,range:h.range,shots:h.shots||1,projSpeed:h.projSpeed,projR:6,
-    pierce:h.pierce||0,crit:0,regen:h.regen||0,lifesteal:0,
+    pierce:h.pierce||0,crit:h.crit||0,regen:h.regen||0,lifesteal:0,
     magnet:90, magnetPull:1.0,
     aura:0,auraDmg:0,auraT:0,auraR:104,
     level:1,xp:0,need:11,kills:0,hurtCd:0,
@@ -1042,6 +1063,107 @@ function spawnEnemy(){
   S.enemies.push({type:m,id:m.id,x,y,r:m.r*1.25,hp,maxHp:hp,spd:m.spd*spdMul,dmg,xp:m.xp,
     color:m.color,em:m.em,rare:m.rare,boss:false,ang:0,walkT:Math.random()*100});
 }
+
+/* ===== 보스 탄막 ===== */
+// 탄환 하나 발사 (각도 a, 속도 sp). 색/크기 지정 가능.
+function bossBullet(e, a, sp, opt){
+  opt = opt||{};
+  S.eprojs.push({
+    x:e.x, y:e.y,
+    vx:Math.cos(a)*sp, vy:Math.sin(a)*sp,
+    r:opt.r||8, dmg:opt.dmg!=null?opt.dmg:Math.max(6,Math.round(e.dmg*0.55)),
+    life:opt.life||190, color:opt.color||e.color||'#ff5470'
+  });
+}
+// 화려함을 위한 보스 탄환 색 팔레트 (보스 번호가 높을수록 다채롭게)
+const BOSS_BULLET_COLORS = ['#ff5470','#ffa23d','#ffe14d','#5af7ff','#7aff9e','#c46bff','#ff7ad0'];
+
+// 보스 공격 — 보스 순번(bossNo)이 높을수록 패턴 종류·속도·화려함 증가
+function bossAttack(e, pl, dt){
+  const t=S.time/1000;
+  const n=e.bossNo||0;
+  // 발사 주기: 보스가 거듭될수록 빨라짐 (하한 28프레임)
+  const interval = Math.max(28, 80 - n*6);
+  e.fireClock = (e.fireClock||0) + dt;
+  // 회전 위상 (스파이럴/꽃 패턴용) — 항상 돌려둔다
+  e.spin = (e.spin||0) + dt*(0.06 + n*0.012);
+  if(e.fireClock < interval) return;
+  e.fireClock = 0;
+
+  // 사용 가능한 패턴 풀: 보스 번호에 따라 점점 늘어남
+  const pool = ['aim'];
+  if(n>=1) pool.push('fan');
+  if(n>=2) pool.push('ring');
+  if(n>=3) pool.push('spiral');
+  if(n>=4) pool.push('burst');
+  if(n>=5) pool.push('twinring');
+  if(n>=6) pool.push('flower');
+  if(n>=8) pool.push('spiral2');
+
+  // 패턴을 순서대로 돌아가며 사용 → 한 보스 안에서도 여러 패턴이 번갈아 나옴
+  e.phase = (e.phase==null?0:e.phase+1);
+  const pat = pool[e.phase % pool.length];
+
+  const baseSp = 3.2 + Math.min(2.6, t/110) + n*0.12;       // 탄속
+  const aimAng = Math.atan2(pl.y-e.y, pl.x-e.x);
+  const col = BOSS_BULLET_COLORS[(n + e.phase) % BOSS_BULLET_COLORS.length];
+  const bigR = 8 + Math.min(4, n*0.4);
+
+  if(pat==='aim'){
+    // 플레이어 조준 (보스 번호↑ → 갈래↑)
+    const ways = 1 + Math.min(4, Math.floor(n/2));
+    const spread = 0.20;
+    for(let k=0;k<ways;k++){ const a=aimAng + (k-(ways-1)/2)*spread; bossBullet(e,a,baseSp,{color:col,r:bigR}); }
+  } else if(pat==='fan'){
+    // 넓은 부채꼴
+    const ways = 5 + Math.min(8, n);
+    const spread = 1.1;
+    for(let k=0;k<ways;k++){ const a=aimAng + (k-(ways-1)/2)*(spread/(ways-1)); bossBullet(e,a,baseSp*0.95,{color:col,r:7}); }
+  } else if(pat==='ring'){
+    // 사방 원형 탄막
+    const cnt = 10 + Math.min(18, n*2);
+    for(let k=0;k<cnt;k++){ const a=(k/cnt)*Math.PI*2 + e.spin; bossBullet(e,a,baseSp*0.85,{color:col,r:7}); }
+  } else if(pat==='spiral'){
+    // 회전 나선 (한 번에 여러 팔)
+    const arms = 2 + Math.min(4, Math.floor(n/2));
+    for(let k=0;k<arms;k++){ const a=e.spin*3 + (k/arms)*Math.PI*2; bossBullet(e,a,baseSp*0.9,{color:col,r:7}); }
+  } else if(pat==='spiral2'){
+    // 양방향 이중 나선
+    const arms = 3 + Math.min(4, Math.floor(n/3));
+    for(let k=0;k<arms;k++){
+      const a=e.spin*4 + (k/arms)*Math.PI*2;
+      bossBullet(e, a, baseSp, {color:col,r:7});
+      bossBullet(e, -a, baseSp, {color:BOSS_BULLET_COLORS[(n+1)%BOSS_BULLET_COLORS.length],r:7});
+    }
+  } else if(pat==='burst'){
+    // 플레이어 조준 속사 — 짧은 간격으로 3연발 예약
+    let shots=3 + Math.min(3, Math.floor(n/3));
+    const fire=(left)=>{ if(left<=0||!e || e._dead) return;
+      const a=Math.atan2(pl.y-e.y, pl.x-e.x);
+      bossBullet(e,a,baseSp*1.15,{color:col,r:6});
+      setTimeout(()=>{ if(S&&S.running) fire(left-1); }, 90);
+    };
+    fire(shots);
+  } else if(pat==='twinring'){
+    // 두 겹 링 (안쪽/바깥쪽 서로 엇갈림)
+    const cnt = 12 + Math.min(12, n);
+    for(let k=0;k<cnt;k++){
+      const a=(k/cnt)*Math.PI*2 + e.spin;
+      bossBullet(e,a,baseSp*0.7,{color:col,r:7});
+      bossBullet(e,a+Math.PI/cnt,baseSp*1.05,{color:BOSS_BULLET_COLORS[(n+3)%BOSS_BULLET_COLORS.length],r:6});
+    }
+  } else if(pat==='flower'){
+    // 꽃잎 모양 — 여러 팔이 회전하며 약간 퍼짐
+    const petals = 6 + Math.min(6, n-2);
+    for(let k=0;k<petals;k++){
+      const base=(k/petals)*Math.PI*2 + e.spin*2;
+      bossBullet(e, base, baseSp, {color:col, r:8});
+      bossBullet(e, base+0.12, baseSp*0.86, {color:col, r:6});
+      bossBullet(e, base-0.12, baseSp*0.86, {color:col, r:6});
+    }
+  }
+}
+
 function spawnBoss(){
   const n=S.bossIdx;                              // 0 = 첫 보스, 1 = 두 번째 ...
   const b=BOSSES[n%BOSSES.length];
@@ -1057,9 +1179,16 @@ function spawnBoss(){
   const dmg = Math.round(b.dmg * dmgMul);
   const spd = b.spd * spdMul;
   const e={type:b,id:b.id,x:W/2,y:-40,r:b.r*1.3,hp,maxHp:hp,spd,dmg,xp:Math.round(b.xp*(1+n*0.08+cycle*0.3)),
-    color:b.color,em:b.em,boss:true,bossData:b,walkT:0};
+    color:b.color,em:b.em,boss:true,bossData:b,bossNo:n,fireClock:0,phase:0,walkT:0};
+  // 보스전은 1:1 — 필드의 일반 몬스터를 모두 치운다 (사라지는 연출)
+  for(const m of S.enemies){
+    if(m.boss) continue;
+    for(let i=0;i<5;i++) S.parts.push({x:m.x,y:m.y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:16,color:m.color});
+  }
+  S.enemies = S.enemies.filter(m=>m.boss);
+  S.eprojs = [];  // 남은 적 탄환도 정리
   S.enemies.push(e); S.boss=e;
-  toast('💀 보스 '+b.name+' 등장!');
+  toast('💀 보스 '+b.name+' 등장! 보스만 남았다');
 }
 
 function update(dt){
@@ -1142,21 +1271,9 @@ function update(dt){
     e.y += (dy/d)*e.spd*dt;
     e.walkT = (e.walkT||0) + dt;
 
-    // 보스는 플레이어를 향해 탄환을 발사한다
+    // 보스는 회를 거듭할수록 점점 다양하고 화려한 패턴으로 공격한다
     if(e.boss){
-      e.fireCd = (e.fireCd==null? 70 : e.fireCd) - dt;
-      if(e.fireCd<=0){
-        e.fireCd = 78;
-        const t=S.time/1000;
-        const bdmg = Math.max(6, Math.round(e.dmg*0.6));   // 보스 탄환 피해
-        const bspd = 3.4 + Math.min(2.2, t/120);
-        // 후반 보스는 3갈래로 발사
-        const ways = t>90?3:1, spread=0.26;
-        for(let k=0;k<ways;k++){
-          const a=e.ang + (k-(ways-1)/2)*spread;
-          S.eprojs.push({x:e.x, y:e.y, vx:Math.cos(a)*bspd, vy:Math.sin(a)*bspd, r:8, dmg:bdmg, life:160, color:e.color||'#ff5470'});
-        }
-      }
+      bossAttack(e, pl, dt);
     }
 
     const rr=e.r+pl.r;
@@ -1178,6 +1295,7 @@ function update(dt){
     }
   }
   S.eprojs=S.eprojs.filter(p=>p.life>0 && p.x>-40&&p.x<W+40&&p.y>-40&&p.y<H+40);
+  if(S.eprojs.length>260) S.eprojs.splice(0, S.eprojs.length-260);  // 과도한 탄막 방지(렉 방지)
   for(const e of S.enemies){ if(e._dead){ onEnemyDeath(e); } }
   S.enemies=S.enemies.filter(e=>!e._dead);
 
@@ -1380,13 +1498,15 @@ function render(){
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
     ctx.restore();
   }
-  // 적(보스) 발사체
+  // 적(보스) 발사체 — 각 탄환 고유 색 + 빛나는 코어
   for(const p of S.eprojs){
-    ctx.save(); ctx.shadowBlur=14; ctx.shadowColor='#ff3b66';
-    ctx.fillStyle='#ff5470';
+    const c = p.color||'#ff5470';
+    ctx.save(); ctx.shadowBlur=14; ctx.shadowColor=c;
+    ctx.fillStyle=c;
     ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
-    ctx.fillStyle='#ffd0da';
-    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*0.45,0,7); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,.85)';
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*0.42,0,7); ctx.fill();
     ctx.restore();
   }
 
@@ -1826,34 +1946,37 @@ function resolveQuiz(correct,timedOut,chosenIdx){
 function pickN(arr,n){ const a=arr.slice(); const out=[]; while(out.length<n && a.length){ out.push(a.splice(Math.floor(Math.random()*a.length),1)[0]); } return out; }
 function openLevelChoices(correct,opts){
   const wrap=$('lvCards'); wrap.innerHTML='';
+  // 치명타 확률이 100% 이상이면 치명타 관련 아이템은 보상 후보에서 제외
+  const critMaxed = S.pl.crit >= 1;
+  const AV = critMaxed ? ITEMS.filter(i=>!i.critItem) : ITEMS;
   let choices;
   if(correct){
     let pool;
     if(opts&&opts.boss){
       // 보스 정답 보상: 전설 위주 + 희귀 (강력하게, 전설 우선 정렬)
-      pool = ITEMS.filter(i=>i.tier==='epic'||i.tier==='rare');
-      choices = pickN(ITEMS.filter(i=>i.tier==='epic'),2)
-                  .concat(pickN(ITEMS.filter(i=>i.tier==='rare'),2));
+      pool = AV.filter(i=>i.tier==='epic'||i.tier==='rare');
+      choices = pickN(AV.filter(i=>i.tier==='epic'),2)
+                  .concat(pickN(AV.filter(i=>i.tier==='rare'),2));
       choices = pickN(choices,3);
       if(choices.length<3) choices = choices.concat(pickN(pool.filter(i=>!choices.includes(i)),3-choices.length));
       $('lvTitle').textContent = '💀 보스 격파 보상!';
-      $('lvSub').textContent = '전설·희귀급 강화를 획득했습니다! (1~3 키로 선택)';
+      $('lvSub').textContent = '전설·희귀급 강화를 획득했습니다! (1~3 키 또는 엔터로 선택)';
     } else {
       // 일반 레벨업 정답 보상: 보통 등급 위주, 가끔(25%) 희귀 1개 섞임 (스펙업 속도 완화)
-      const normals = ITEMS.filter(i=>i.tier==='normal');
+      const normals = AV.filter(i=>i.tier==='normal');
       if(Math.random()<0.25){
-        choices = pickN(ITEMS.filter(i=>i.tier==='rare'),1).concat(pickN(normals,2));
+        choices = pickN(AV.filter(i=>i.tier==='rare'),1).concat(pickN(normals,2));
       } else {
         choices = pickN(normals,3);
       }
       choices = pickN(choices,3);
       if(choices.length<3) choices = choices.concat(pickN(normals.filter(i=>!choices.includes(i)),3-choices.length));
       $('lvTitle').textContent = '🎉 정답 보상!';
-      $('lvSub').textContent = '강화를 하나 골라 받으세요. (1~3 키로 선택)';
+      $('lvSub').textContent = '강화를 하나 골라 받으세요. (1~3 키 또는 엔터로 선택)';
     }
   } else {
     // 오답 → 약한 위로 아이템 '하나'만 지급 (선택지 없음)
-    const weak = ITEMS.filter(i=>i.tier==='weak');
+    const weak = AV.filter(i=>i.tier==='weak');
     choices=[ weak[Math.floor(Math.random()*weak.length)] ];
     $('lvTitle').textContent = '오답… 약한 보상';
     $('lvSub').textContent = '아쉽지만 이번엔 약한 보상 하나만 받습니다.';
