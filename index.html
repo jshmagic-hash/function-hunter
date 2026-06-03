@@ -344,7 +344,8 @@
     <div class="card">
       <div class="qhead"><h2 style="margin:0">❓ 플레이 방법</h2><button class="btn ghost sm" id="helpBack" style="width:auto">← 닫기</button></div>
       <div class="hint" style="line-height:1.7;font-size:13.5px;">
-        <p><b>1. 자동 사냥</b> — 캐릭터는 가장 가까운 적을 향해 <b>자동으로 공격</b>합니다. 몬스터는 플레이어를 향해 곧장 다가옵니다. <b>WASD / 방향키</b>(모바일은 왼쪽 조이스틱)로 이동하며 피하세요.</p>
+        <p><b>1. 자동 사냥</b> — 캐릭터는 가장 가까운 적을 향해 <b>자동으로 공격</b>하고, 발사한 탄은 적을 <b>살짝 따라가</b> 잘 명중합니다. 몬스터는 플레이어를 향해 다가옵니다. <b>WASD / 방향키</b>(모바일은 왼쪽 조이스틱)로 이동하며 피하세요.</p>
+        <p><b>⚠ 특수 몬스터</b> — <span style="color:#ffd24d">노란 원거리형</span>(멀리서 탄을 쏨), <span style="color:#ff7a3d">주황 자폭형</span>(붙으면 폭발, 경고 링이 깜빡임), <span style="color:#ff5a8a">분홍 돌진형</span>(점선으로 조준 후 빠르게 돌진)이 섞여 나옵니다. 초반엔 드물고, 게임이 진행될수록 자주·강하게 등장합니다.</p>
         <p><b>2. 레벨업 = 수학 시간!</b> — 경험치가 차면 <b>수학 문제</b>가 등장합니다. <b>맞히면 희귀·전설급 강화</b>를 골라서 받고, <b>틀리면 약한 보상 하나</b>만 받습니다. 보기와 강화 카드는 <b>키보드 1·2·3·4</b> 로 고를 수 있고, <b>엔터</b>로도 진행·보상 선택(첫 번째 카드)이 됩니다. <b>제한시간은 없으니</b> 충분히 생각하고 푸세요.</p>
         <p><b>3. 자석 효과</b> — 드랍 아이템은 가까이 가면 자동으로 끌려옵니다. 자석 아이템을 얻으면 흡인 범위가 더 넓어져요!</p>
         <p><b>4. 바다의 모험</b> — 깊은 바닷속에서 펼쳐지는 함수 사냥. 해초와 산호, 거품이 흔들리는 무대 위에서 몬스터를 처치하세요. 적이 떨어뜨리는 <b>❤️ 하트를 먹으면 체력이 회복</b>됩니다. 레벨이 오를수록 적은 <b>점점 빨라지고</b> 문제도 <b>점점 어려워집니다</b>.</p>
@@ -375,9 +376,13 @@
   const signConst = q => q===0?'' : (q>0?' + ':' - ') + Math.abs(q);
   const trino = (p,q)=> 'x²' + signCoefX(p) + signConst(q);
   const parenC = c => c>0 ? `(x + ${c})` : `(x - ${-c})`;
+  // 두 인수가 같으면 완전제곱식 (x±a)² 으로 표기 (인수분해 답에 완전제곱식 허용)
+  const facLabel = (a,b) => (a===b) ? `${parenC(a)}²` : `${parenC(a)}${parenC(b)}`;
   function rootsLabel(rs){
     const a=Math.min(...rs), b=Math.max(...rs);
     if(a===b) return `x = ${a} (중근)`;
+    // 절댓값이 같고 부호만 다른 경우(예: -3, 3) → x = ±3 로 표기
+    if(a===-b && a<0) return `x = ±${b}`;
     return `x = ${a} 또는 x = ${b}`;
   }
   const norm = s => String(s).trim().replace(/\s+/g,'').replace(/[−–—]/g,'-').replace(/^x=/,'').toLowerCase();
@@ -385,9 +390,15 @@
   // 보기의 '값'을 기준으로 한 정규화 키 — 표기만 다른 동일 답을 같은 것으로 본다.
   function canonKey(s){
     let t=String(s).replace(/<[^>]+>/g,'').replace(/\s+/g,'').replace(/[−–—]/g,'-').toLowerCase();
+    // 완전제곱식 (x±a)² → (x±a)(x±a) 와 같은 것으로 본다
+    const sq=t.match(/^(.*)\(x([+\-]\d+)\)²$/);
+    if(sq){ const lead=sq[1]; const f=sq[2]; return 'FAC:'+lead+':'+[f,f].sort().join('|'); }
     // 인수분해 꼴: (x±a)(x±b) → 인수들을 정렬 ( (x-1)(x-2)==(x-2)(x-1) )
     const fac=[...t.matchAll(/\(x([+\-]\d+)\)/g)].map(m=>m[1]);
     if(fac.length>=2){ const lead=t.split('(')[0]; return 'FAC:'+lead+':'+fac.slice().sort().join('|'); }
+    // 해 표기: x=±A → {-A, A} 로 해석
+    const pm=t.match(/x=±(\d+)/);
+    if(pm){ const v=+pm[1]; return 'ROOT:'+[-v,v].sort((a,b)=>a-b).join(','); }
     // 해 표기: x=A 또는 x=B → 근을 정렬
     const roots=[...t.matchAll(/x=(-?\d+)/g)].map(m=>+m[1]);
     if(roots.length){ roots.sort((a,b)=>a-b); return 'ROOT:'+roots.join(','); }
@@ -539,7 +550,7 @@
   G('factor','이차식 인수분해',2,50,'mc',()=>{
     const a=Rn0(-7,7); let b=Rn0(-7,7);
     const p=a+b, q=a*b;
-    const correct=`${parenC(a)}${parenC(b)}`;
+    const correct=facLabel(a,b);
     const ds=[`${parenC(-a)}${parenC(b)}`, `${parenC(a)}${parenC(-b)}`, `${parenC(a+1)}${parenC(b)}`, `${parenC(a)}${parenC(b-1)}`, `${parenC(-a)}${parenC(-b)}`, `${parenC(a-1)}${parenC(b)}`];
     const opt=mc(correct, ds, ()=>`${parenC(a+Rn0(-2,2))}${parenC(b+Rn0(-2,2))}`);
     return {
@@ -858,23 +869,27 @@ const ITEMS = [
     story:'더 멀리 있는 적까지 살피는 망원경.'},
   {id:'magnet_s', name:'작은 자석', em:'🧲', tier:'normal', desc:'경험치 자석 범위 +30%, 흡인력 +12%', apply:p=>{p.magnet*=1.3; p.magnetPull*=1.12;},
     story:'아이템을 끌어당기는 작은 자석.'},
-  {id:'regen', name:'해의 물약', em:'🧪', tier:'rare', desc:'초당 체력 회복 +0.6', apply:p=>p.regen+=0.6,
+  {id:'shot_n', name:'쪼개진 화살', em:'🎯', tier:'normal', desc:'발사체 +1', apply:p=>p.shots+=1,
+    story:'한 발이 둘로 쪼개진다. 수가 곧 힘.'},
+  {id:'regen', name:'해의 물약', em:'🧪', tier:'rare', desc:'초당 체력 회복 +0.35', apply:p=>p.regen+=0.35,
     story:'방정식의 해처럼 잃은 것을 되찾아 준다.'},
-  {id:'multi', name:'두 근의 화살', em:'🏹', tier:'rare', desc:'발사체 +1', apply:p=>p.shots+=1,
-    story:'근이 둘이듯, 화살도 둘.'},
-  {id:'pierce', name:'관통하는 인수', em:'➤', tier:'rare', desc:'관통 +1', apply:p=>p.pierce+=1,
-    story:'인수분해된 칼날이 적을 통과한다.'},
+  {id:'multi', name:'두 근의 화살', em:'🏹', tier:'rare', desc:'발사체 +1 · 탄 속도 +12%', apply:p=>{p.shots+=1;p.projSpeed*=1.12;},
+    story:'근이 둘이듯, 화살도 둘. 더 빠르게 날아간다.'},
+  {id:'pierce', name:'관통하는 인수', em:'➤', tier:'rare', desc:'관통 +2 · 탄 크기 +15%', apply:p=>{p.pierce+=2;p.projR*=1.15;},
+    story:'인수분해된 칼날이 적을 꿰뚫고 나아간다.'},
+  {id:'bounce', name:'반사하는 부등호', em:'🔃', tier:'rare', desc:'투사체가 적에게 2번 튕김 (튕길수록 약해짐)', apply:p=>p.bounce+=2,
+    story:'부등호의 방향이 뒤집히듯, 탄이 적을 맞고 다음 적에게 되튄다.'},
   {id:'crit', name:'간파의 눈동자', em:'👁️', tier:'rare', desc:'치명타 확률 +15%', critItem:true, apply:p=>p.crit+=0.15,
     story:'약점을 간파해 두 배의 피해.'},
   {id:'big', name:'완전제곱의 핵', em:'💥', tier:'epic', desc:'공격력 +60% · 탄 크기 +45% · 공속 +10%', apply:p=>{p.atk*=1.6;p.projR*=1.45;p.atkCd*=0.90;},
     story:'(x+a)²처럼 완벽하게 응축된 파괴의 핵. 한 방이 묵직해진다.'},
-  {id:'aura', name:'근의 공식 오라', em:'🌀', tier:'epic', desc:'강력한 지속 피해 오라 (피해 大·범위 大)', apply:p=>{p.aura=Math.max(p.aura,1);p.auraDmg+=22;p.auraR+=55;},
-    story:'주위를 맴도는 신비한 공식의 힘. 닿는 적이 녹아내린다.'},
+  {id:'aura', name:'근의 공식 오라', em:'🌀', tier:'epic', desc:'주변 적에게 지속 피해 오라', apply:p=>{p.aura=Math.max(p.aura,1);p.auraDmg+=13;p.auraR+=34;},
+    story:'주위를 맴도는 신비한 공식의 힘.'},
   {id:'magnet', name:'무한대의 자석', em:'🧲', tier:'epic', desc:'자석 범위 +160% · 흡인력 2.4배 · 이동속도 +10%', apply:p=>{p.magnet*=2.6; p.magnetPull*=2.4; p.moveSpeed*=1.10;},
     story:'멀리 있는 경험치까지 통째로 빨아들이는 자석.'},
-  {id:'vamp', name:'흡수하는 미지수', em:'🩸', tier:'epic', desc:'공격 시 체력 흡수 +8% · 최대 체력 +30', apply:p=>{p.lifesteal+=0.08;p.maxHp+=30;p.hp+=30;},
+  {id:'vamp', name:'흡수하는 미지수', em:'🩸', tier:'epic', desc:'공격 시 체력 흡수 +4% · 최대 체력 +18', apply:p=>{p.lifesteal+=0.04;p.maxHp+=18;p.hp+=18;},
     story:'적의 값을 흡수해 자신의 체력으로 바꾼다. 싸울수록 단단해진다.'},
-  {id:'twin', name:'중근의 분신', em:'✥', tier:'epic', desc:'발사체 +2 · 관통 +1', apply:p=>{p.shots+=2;p.pierce+=1;},
+  {id:'twin', name:'중근의 분신', em:'✥', tier:'epic', desc:'발사체 +2 · 관통 +2', apply:p=>{p.shots+=2;p.pierce+=2;},
     story:'중근처럼 겹쳐 나타난 두 갈래의 탄막.'},
   {id:'overdrive', name:'계산 폭주', em:'⚡', tier:'epic', desc:'공속 +30% · 치명타 +20% · 사정거리 +15%', critItem:true, apply:p=>{p.atkCd*=0.70;p.crit+=0.20;p.range*=1.15;},
     story:'번개처럼 빠른 계산으로 공격을 가속한다.'},
@@ -888,13 +903,13 @@ const ITEMS = [
 ];
 const HEROES = {
   // 균형형 전사: 든든한 체력 + 빠른 근접 스윙, 약간의 치명타. 무난하게 강함.
-  warrior:{name:'검사', em:'⚔️', maxHp:135, atk:14, atkCd:40, moveSpeed:2.6, range:150, shots:1, projSpeed:6.8, crit:0.08, weapon:'sword', skin:{body:'#2ea1c4',head:'#ffe0c2',cape:'#1f6f97'}},
+  warrior:{name:'검사', em:'⚔️', maxHp:135, atk:14, atkCd:40, moveSpeed:2.85, range:150, shots:1, projSpeed:6.8, crit:0.08, weapon:'sword', skin:{body:'#2ea1c4',head:'#ffe0c2',cape:'#1f6f97'}},
   // 한 방 + 관통형 마법사: 높은 단발 피해와 긴 사정거리, 관통. 대신 체력이 약함.
-  mage:   {name:'마법사', em:'🔮', maxHp:92,  atk:17, atkCd:48, moveSpeed:2.5, range:195, shots:1, projSpeed:7.8, pierce:1, weapon:'staff', skin:{body:'#4f8df0',head:'#ffe0c2',cape:'#274aa8'}},
+  mage:   {name:'마법사', em:'🔮', maxHp:92,  atk:17, atkCd:48, moveSpeed:2.75, range:195, shots:1, projSpeed:7.8, pierce:1, weapon:'staff', skin:{body:'#4f8df0',head:'#ffe0c2',cape:'#274aa8'}},
   // 연사·기동형 궁수: 빠른 2연발과 기동력. 발당 피해는 가장 낮아 균형을 맞춤.
-  ranger: {name:'궁수', em:'🏹', maxHp:100, atk:7,  atkCd:33, moveSpeed:2.85, range:175, shots:2, projSpeed:8, weapon:'bow', skin:{body:'#2bb38a',head:'#ffe0c2',cape:'#1c7d63'}},
+  ranger: {name:'궁수', em:'🏹', maxHp:100, atk:7,  atkCd:33, moveSpeed:3.1, range:175, shots:2, projSpeed:8, weapon:'bow', skin:{body:'#2bb38a',head:'#ffe0c2',cape:'#1c7d63'}},
   // 탱커형 수호자: 최고 체력 + 재생. 공격력도 쓸 만하게 올려 끝까지 버티며 싸움.
-  guardian:{name:'수호자', em:'🛡️', maxHp:185, atk:13, atkCd:46, moveSpeed:2.45, range:148, shots:1, projSpeed:6.2, regen:0.9, weapon:'shield', skin:{body:'#5a86b8',head:'#ffe0c2',cape:'#324f74'}},
+  guardian:{name:'수호자', em:'🛡️', maxHp:185, atk:13, atkCd:46, moveSpeed:2.7, range:148, shots:1, projSpeed:6.2, regen:0.9, weapon:'shield', skin:{body:'#5a86b8',head:'#ffe0c2',cape:'#324f74'}},
 };
 
 /* =========================================================
@@ -980,7 +995,7 @@ function freshPlayer(heroId){
   return {x:W/2,y:H/2,r:19,hero:heroId,em:h.em,
     hp:h.maxHp,maxHp:h.maxHp,atk:h.atk,atkCd:h.atkCd,cd:0,
     moveSpeed:h.moveSpeed,range:h.range,shots:h.shots||1,projSpeed:h.projSpeed,projR:6,
-    pierce:h.pierce||0,crit:h.crit||0,regen:h.regen||0,lifesteal:0,
+    pierce:h.pierce||0,crit:h.crit||0,regen:h.regen||0,lifesteal:0,bounce:0,
     magnet:90, magnetPull:1.0,
     aura:0,auraDmg:0,auraT:0,auraR:104,
     level:1,xp:0,need:11,kills:0,hurtCd:0,
@@ -1024,7 +1039,7 @@ function mulberry32(seed){
 
 function newGame(info){
   showScreen('screen-game'); resize();
-  S={info, pl:freshPlayer(info.hero), enemies:[],projs:[],eprojs:[],orbs:[],parts:[],floats:[],
+  S={info, pl:freshPlayer(info.hero), enemies:[],projs:[],eprojs:[],booms:[],orbs:[],parts:[],floats:[],
      time:0,spawnT:1600,spawnInt:1900,bossT:28000,bossIdx:0,boss:null,
      running:true,paused:false,score:0,quizCount:0,quizCorrect:0,qLog:[],
      lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
@@ -1042,8 +1057,66 @@ function loop(ts){
   if(S) requestAnimationFrame(loop);
 }
 
+// 돌진형(charger) / 보스 돌진 공통 행동: 평소 천천히 다가오다 가끔 강하게 돌진
+function behaveSpecial(e, pl, d, dx, dy, dt){
+  if(e.behavior!=='charger') {
+    // 보스 등에 부여된 보조 돌진: 쿨다운마다 짧게 가속
+    e.chargeCd=(e.chargeCd==null?180:e.chargeCd)-dt;
+    if(e.chargeCd<=0 && e.dashT==null){ e.dashT=22; e.dashCd=0; e.chargeCd=170+Math.random()*120; }
+  }
+  if(e.behavior==='charger'){
+    if(e.dashT==null){
+      // 평소: 느리게 접근하다가 일정 주기로 '경고 후 돌진'
+      e.x += (dx/d)*e.spd*0.55*dt; e.y += (dy/d)*e.spd*0.55*dt;
+      e.windup=(e.windup==null?e.chargeEvery:e.windup)-dt;
+      if(e.windup<=0){ e.telegraph=(e.telegraph||0)+dt;
+        if(e.telegraph>=18){ // 약 0.3초 조준 경고 후 돌진 시작
+          e.dashT=26; e.dashAng=e.ang; e.telegraph=0; e.windup=e.chargeEvery;
+        }
+      }
+    }
+  }
+  if(e.dashT!=null){
+    // 돌진 중: 정해진 방향으로 매우 빠르게 이동
+    const ang = e.dashAng!=null?e.dashAng:e.ang;
+    const ds = (e.dashSpeed||e.spd*3.4);
+    e.x += Math.cos(ang)*ds*dt; e.y += Math.sin(ang)*ds*dt;
+    e.dashT-=dt;
+    if(Math.random()<0.6) S.parts.push({x:e.x,y:e.y,vx:0,vy:0,life:8,color:e.color});
+    if(e.dashT<=0){ e.dashT=null; e.dashAng=null; }
+  }
+}
+// 자폭형 폭발: 주변에 광역 피해
+function bomberExplode(e, pl){
+  e._dead=true; e._bombed=true;
+  const R=e.boomR||(e.r+46);
+  // 폭발 이펙트
+  for(let i=0;i<22;i++){ const a=Math.random()*7, sp=2+Math.random()*5;
+    S.parts.push({x:e.x,y:e.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:20+Math.random()*10,color: i%2?'#ff8a3d':'#ffd24d'}); }
+  S.booms = S.booms||[]; S.booms.push({x:e.x,y:e.y,r:R,life:14,max:14});
+  // 플레이어가 폭발 범위 안이면 피해
+  const dd=Math.hypot(pl.x-e.x, pl.y-e.y);
+  if(dd < R+pl.r && pl.hurtCd<=0){
+    pl.hp-=e.boomDmg; pl.hurtCd=30;
+    addFloat(pl.x,pl.y-22,'-'+e.boomDmg,'#ff8a3d');
+    if(pl.hp<=0){ pl.hp=0; gameOver('패배'); }
+  }
+}
+
+// 특정 적을 제외한 가장 가까운 살아있는 적을 찾는다 (튕김 대상)
+function nearestEnemy(x, y, except){
+  let best=null, bd=Infinity;
+  for(const e of S.enemies){
+    if(e._dead || e===except) continue;
+    const dx=e.x-x, dy=e.y-y, d=dx*dx+dy*dy;
+    if(d<bd){ bd=d; best=e; }
+  }
+  return best;
+}
+
 function spawnEnemy(){
   const t=S.time/1000;
+  const sf=scoreFactor();   // 점수 20000부터 급상승하는 난이도 배수
   const avail=MONSTERS.filter(m=>{
     const tier = m.hp>40?3 : m.hp>20?2 : 1;
     if(m.rare) return t>40 && Math.random()<0.12;
@@ -1054,14 +1127,56 @@ function spawnEnemy(){
   const side=Math.floor(Math.random()*4); let x,y;
   if(side===0){x=Math.random()*W;y=-20;} else if(side===1){x=W+20;y=Math.random()*H;}
   else if(side===2){x=Math.random()*W;y=H+20;} else {x=-20;y=Math.random()*H;}
-  // 체력: 중반(60초)부터 가파르게 상승. 90초 이후엔 더 강해짐.
-  const hpScale = 1 + t/80 + Math.max(0, (t-60)/45) + Math.max(0,(t-120)/60);
-  // 속도: 기본 빠르게 + 시간이 갈수록 더 빠르게(상한 높임)
-  const spdMul = 1.35 + Math.min(0.7, t/220);
+  // 체력: 중반(60초)부터 가파르게 상승. 90초 이후엔 더 강해짐. + 점수 난이도 배수
+  const hpScale = (1 + t/80 + Math.max(0, (t-60)/45) + Math.max(0,(t-120)/60)) * sf;
+  // 속도: 기본 빠르게 + 시간이 갈수록 더 빠르게(상한 높임) + 점수에 따라 조금 더
+  const spdMul = (1.35 + Math.min(0.7, t/220)) * (1 + (sf-1)*0.35);
   const hp = Math.round(m.hp*hpScale);
-  const dmg = m.dmg + (t>90?Math.floor((t-90)/45):0);  // 후반엔 접촉 피해도 조금 증가
-  S.enemies.push({type:m,id:m.id,x,y,r:m.r*1.25,hp,maxHp:hp,spd:m.spd*spdMul,dmg,xp:m.xp,
-    color:m.color,em:m.em,rare:m.rare,boss:false,ang:0,walkT:Math.random()*100});
+  const dmg = Math.round((m.dmg + (t>90?Math.floor((t-90)/45):0)) * (1 + (sf-1)*0.5));
+  const e={type:m,id:m.id,x,y,r:m.r*1.25,hp,maxHp:hp,spd:m.spd*spdMul,dmg,xp:m.xp,
+    color:m.color,em:m.em,rare:m.rare,boss:false,ang:0,walkT:Math.random()*100};
+
+  // ===== 특수 행동 부여 =====
+  // 특수 몬스터 등장 확률: 초반엔 낮고(체감 난이도 보호), 시간·점수에 따라 증가
+  let pSpecial = Math.min(0.55, Math.max(0, (t-20)/240) + (sf-1)*0.12);
+  if(Math.random() < pSpecial){
+    const roll=Math.random();
+    if(roll<0.4){
+      // 원거리 공격형: 거리를 두고 탄을 쏨. 체력 낮춰 균형.
+      e.behavior='shooter';
+      e.hp=Math.round(e.hp*0.7); e.maxHp=e.hp;
+      e.standoff=140+Math.random()*40;
+      e.fireEvery=Math.max(45, 95 - t*0.15);          // 후반일수록 자주 쏨
+      e.bspd=3.0 + Math.min(2, t/150);
+      e.bdmg=Math.max(4, Math.round((m.dmg*0.7)*(1+(sf-1)*0.5)));
+      e.spd*=0.8; e.xp=Math.round(e.xp*1.3); e.color='#ffd24d';
+    } else if(roll<0.7){
+      // 자폭형: 빠르게 접근 후 폭발(광역). 체력 매우 낮음.
+      e.behavior='bomber';
+      e.hp=Math.round(e.hp*0.55); e.maxHp=e.hp;
+      e.spd*=1.35;
+      e.boomR=e.r+44;
+      e.boomDmg=Math.max(8, Math.round(e.dmg*1.6));
+      e.dmg=Math.round(e.dmg*0.6);                    // 접촉 자체 피해는 낮추고 폭발에 집중
+      e.xp=Math.round(e.xp*1.4); e.color='#ff7a3d';
+    } else {
+      // 돌진형: 평소 느리다가 경고 후 빠르게 돌진.
+      e.behavior='charger';
+      e.hp=Math.round(e.hp*1.05); e.maxHp=e.hp;
+      e.chargeEvery=Math.max(70, 150 - t*0.2);
+      e.dashSpeed=(m.spd*spdMul)*3.4;
+      e.dmg=Math.round(e.dmg*1.15);                   // 부딪히면 아픔
+      e.xp=Math.round(e.xp*1.3); e.color='#ff5a8a';
+    }
+  }
+  S.enemies.push(e);
+}
+
+// 점수 기반 난이도 배수: 20000점 전까지는 1, 이후 급격히 상승
+function scoreFactor(){
+  const s = S.score||0;
+  if(s < 20000) return 1;
+  return 1 + (s - 20000)/12000;   // 32000점→약2배, 44000점→3배, 56000점→4배 …
 }
 
 /* ===== 보스 탄막 ===== */
@@ -1180,6 +1295,8 @@ function spawnBoss(){
   const spd = b.spd * spdMul;
   const e={type:b,id:b.id,x:W/2,y:-40,r:b.r*1.3,hp,maxHp:hp,spd,dmg,xp:Math.round(b.xp*(1+n*0.08+cycle*0.3)),
     color:b.color,em:b.em,boss:true,bossData:b,bossNo:n,fireClock:0,phase:0,walkT:0};
+  // 3번째 보스(n>=2)부터 돌진 능력 부여 (탄막 + 가끔 돌진)
+  if(n>=2){ e.behavior='dash'; e.dashSpeed=spd*4.0; }
   // 보스전은 1:1 — 필드의 일반 몬스터를 모두 치운다 (사라지는 연출)
   for(const m of S.enemies){
     if(m.boss) continue;
@@ -1213,13 +1330,14 @@ function update(dt){
 
   S.spawnT-=dt*16.667;
   if(S.spawnT<=0 && !S.boss){   // 보스가 살아있는 동안에는 잡몹이 나오지 않음
-    const cap = 30;  // 동시 등장 상한 (렉 방지) — 보스 제외
+    const sf=scoreFactor();
+    const cap = Math.min(60, Math.round(30 * (1 + (sf-1)*0.6)));  // 점수 높을수록 동시 등장 상한↑(최대 60)
     const alive = S.enemies.reduce((c,e)=>c+(e.boss?0:1),0);
     if(alive < cap){
-      const n=1+Math.floor(S.time/60000); // 등장 수 증가를 더 천천히
+      const n=Math.round((1+Math.floor(S.time/60000)) * (1 + (sf-1)*0.7));  // 점수 높을수록 한 번에 더 많이
       for(let i=0;i<n && (alive+i)<cap;i++) spawnEnemy();
     }
-    S.spawnT=Math.max(560,S.spawnInt-S.time/170);
+    S.spawnT=Math.max(220, (S.spawnInt-S.time/170) / (1 + (sf-1)*0.6));  // 점수 높을수록 더 자주
   }
   S.bossT-=dt*16.667;
   if(S.bossT<=0 && !S.boss){ spawnBoss(); S.bossT=64000; }
@@ -1237,7 +1355,7 @@ function update(dt){
         const a=base+off;
         const crit=Math.random()<pl.crit;
         S.projs.push({x:pl.x,y:pl.y,vx:Math.cos(a)*pl.projSpeed,vy:Math.sin(a)*pl.projSpeed,
-          r:pl.projR,dmg:pl.atk*(crit?2:1),crit,life:90,pierce:pl.pierce});
+          spd:pl.projSpeed, r:pl.projR,dmg:pl.atk*(crit?2:1),crit,life:90,pierce:pl.pierce,bounce:pl.bounce||0});
       }
       pl.cd=pl.atkCd;
     }
@@ -1247,33 +1365,84 @@ function update(dt){
     for(const e of S.enemies){ if(dist2(e,pl) < R2){ hitEnemy(e, pl.auraDmg, false); } } } }
 
   // 발사체
+  const TURN = 0.085;   // 유도 강도(라디안/프레임) — 약하게 휘어 회피 의미는 유지
   for(const p of S.projs){
+    // 유도: 가장 가까운 적(방금 맞힌 적 제외) 쪽으로 진행 방향을 조금씩 보정
+    const tgt = nearestEnemy(p.x, p.y, p._lastHit);
+    if(tgt){
+      const desired = Math.atan2(tgt.y-p.y, tgt.x-p.x);
+      const cur = Math.atan2(p.vy, p.vx);
+      let diff = desired - cur;
+      while(diff >  Math.PI) diff -= Math.PI*2;
+      while(diff < -Math.PI) diff += Math.PI*2;
+      const turn = Math.max(-TURN*dt, Math.min(TURN*dt, diff));
+      const na = cur + turn;
+      const sp = p.spd || Math.hypot(p.vx,p.vy) || 6;
+      p.vx = Math.cos(na)*sp; p.vy = Math.sin(na)*sp;
+    }
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
     for(const e of S.enemies){
       if(e._dead) continue;
+      if(e===p._lastHit) continue;            // 방금 맞힌 적은 건너뜀(연속 중복 명중 방지)
       const rr=(e.r+p.r); if(dist2(e,p)<rr*rr){
         hitEnemy(e,p.dmg,p.crit);
         if(pl.lifesteal) pl.hp=Math.min(pl.maxHp,pl.hp+p.dmg*pl.lifesteal);
-        if(p.pierce>0){p.pierce--;} else {p.life=0;}
-        break;
+        // 관통이 남아 있으면 그대로 통과
+        if(p.pierce>0){ p.pierce--; p._lastHit=e; break; }
+        // 튕김이 남아 있으면 가장 가까운 '다른' 적에게 방향 전환 (피해는 약해짐)
+        if(p.bounce>0){
+          const next=nearestEnemy(p.x,p.y,e);
+          if(next){
+            p.bounce--; p._lastHit=e;
+            p.dmg=Math.max(1, Math.round(p.dmg*0.6));   // 튕길 때마다 피해 60%로 감소
+            const ang=Math.atan2(next.y-p.y, next.x-p.x);
+            const sp=Math.hypot(p.vx,p.vy)||pl.projSpeed;
+            p.vx=Math.cos(ang)*sp; p.vy=Math.sin(ang)*sp;
+            p.life=Math.max(p.life,50);
+            p.crit=false;                               // 튕긴 탄은 치명타 표시 해제
+            break;
+          }
+        }
+        p.life=0; break;   // 관통·튕김 모두 없으면 소멸
       }
     }
   }
   S.projs=S.projs.filter(p=>p.life>0 && p.x>-30&&p.x<W+30&&p.y>-30&&p.y<H+30);
 
-  // ===== 적 이동 — 모든 몬스터/보스가 플레이어 방향으로 직진 =====
+  // ===== 적 이동/행동 — 유형별로 다르게 움직인다 =====
   for(const e of S.enemies){
     if(e._dead) continue;
     const dx=pl.x-e.x, dy=pl.y-e.y;
     const d=Math.hypot(dx,dy)||1;
     e.ang = Math.atan2(dy,dx);
-    e.x += (dx/d)*e.spd*dt;
-    e.y += (dy/d)*e.spd*dt;
     e.walkT = (e.walkT||0) + dt;
 
-    // 보스는 회를 거듭할수록 점점 다양하고 화려한 패턴으로 공격한다
     if(e.boss){
+      // 보스: 이동 + 화려한 탄막, 그리고 부여된 특수 행동(돌진 등)
+      e.x += (dx/d)*e.spd*dt;
+      e.y += (dy/d)*e.spd*dt;
       bossAttack(e, pl, dt);
+      if(e.behavior) behaveSpecial(e, pl, d, dx, dy, dt);
+    } else if(e.behavior==='shooter'){
+      // 원거리형: 일정 거리(standoff)를 유지하며 플레이어에게 탄을 쏜다
+      const stand=e.standoff||150;
+      if(d > stand*1.15){ e.x += (dx/d)*e.spd*dt; e.y += (dy/d)*e.spd*dt; }
+      else if(d < stand*0.75){ e.x -= (dx/d)*e.spd*0.7*dt; e.y -= (dy/d)*e.spd*0.7*dt; } // 너무 가까우면 물러남
+      e.fireCd=(e.fireCd==null?e.fireEvery:e.fireCd)-dt;
+      if(e.fireCd<=0){ e.fireCd=e.fireEvery;
+        S.eprojs.push({x:e.x,y:e.y,vx:Math.cos(e.ang)*e.bspd,vy:Math.sin(e.ang)*e.bspd,r:6,dmg:e.bdmg,life:200,color:'#ffd24d'});
+      }
+    } else if(e.behavior==='charger'){
+      behaveSpecial(e, pl, d, dx, dy, dt);
+    } else if(e.behavior==='bomber'){
+      // 자폭형: 평소보다 빠르게 돌진, 가까워지면 점화 후 폭발
+      e.x += (dx/d)*e.spd*dt; e.y += (dy/d)*e.spd*dt;
+      if(e.fuse==null && d < e.r+pl.r+22){ e.fuse=26; }   // 점화(약 0.4초 후 폭발)
+      if(e.fuse!=null){ e.fuse-=dt; if(e.fuse<=0){ bomberExplode(e, pl); continue; } }
+    } else {
+      // 기본형: 플레이어를 향해 직진
+      e.x += (dx/d)*e.spd*dt;
+      e.y += (dy/d)*e.spd*dt;
     }
 
     const rr=e.r+pl.r;
@@ -1296,6 +1465,7 @@ function update(dt){
   }
   S.eprojs=S.eprojs.filter(p=>p.life>0 && p.x>-40&&p.x<W+40&&p.y>-40&&p.y<H+40);
   if(S.eprojs.length>260) S.eprojs.splice(0, S.eprojs.length-260);  // 과도한 탄막 방지(렉 방지)
+  if(S.booms){ for(const b of S.booms) b.life-=dt; S.booms=S.booms.filter(b=>b.life>0); }
   for(const e of S.enemies){ if(e._dead){ onEnemyDeath(e); } }
   S.enemies=S.enemies.filter(e=>!e._dead);
 
@@ -1486,8 +1656,37 @@ function render(){
     ctx.restore();
   }
 
+  // 폭발 범위 효과(자폭형)
+  if(S.booms) for(const b of S.booms){
+    const k=b.life/b.max;
+    ctx.save(); ctx.globalAlpha=0.45*k; ctx.fillStyle='#ff8a3d';
+    ctx.beginPath(); ctx.arc(b.x,b.y, b.r*(1.1-0.5*k), 0, 7); ctx.fill();
+    ctx.globalAlpha=0.8*k; ctx.lineWidth=3; ctx.strokeStyle='#ffd24d';
+    ctx.beginPath(); ctx.arc(b.x,b.y, b.r*(1.1-0.5*k), 0, 7); ctx.stroke();
+    ctx.restore();
+  }
+
   // 적
   for(const e of S.enemies){
+    if(e._dead) continue;
+    // 행동 예고/표시
+    if(!e.boss){
+      if(e.behavior==='bomber' && e.fuse!=null){
+        // 점화: 깜빡이는 경고 링
+        const blink = (Math.floor(S.time/80)%2===0);
+        ctx.save(); ctx.globalAlpha=blink?0.9:0.4; ctx.lineWidth=2.5; ctx.strokeStyle='#ff5a2d';
+        ctx.beginPath(); ctx.arc(e.x,e.y,e.r+6,0,7); ctx.stroke(); ctx.restore();
+      } else if(e.behavior==='charger' && e.telegraph>0 && e.dashT==null){
+        // 돌진 조준선
+        ctx.save(); ctx.globalAlpha=0.5; ctx.strokeStyle='#ff5a8a'; ctx.lineWidth=2; ctx.setLineDash([5,5]);
+        ctx.beginPath(); ctx.moveTo(e.x,e.y); ctx.lineTo(e.x+Math.cos(e.ang)*80, e.y+Math.sin(e.ang)*80); ctx.stroke();
+        ctx.restore();
+      } else if(e.behavior==='charger' && e.dashT!=null){
+        // 돌진 중 잔상 트레일
+        ctx.save(); ctx.globalAlpha=0.35; ctx.fillStyle=e.color;
+        ctx.beginPath(); ctx.arc(e.x-Math.cos(e.dashAng||e.ang)*10, e.y-Math.sin(e.dashAng||e.ang)*10, e.r*0.8,0,7); ctx.fill(); ctx.restore();
+      }
+    }
     if(e.boss) drawBoss(e); else drawMonster(e);
   }
 
@@ -1962,9 +2161,9 @@ function openLevelChoices(correct,opts){
       $('lvTitle').textContent = '💀 보스 격파 보상!';
       $('lvSub').textContent = '전설·희귀급 강화를 획득했습니다! (1~3 키 또는 엔터로 선택)';
     } else {
-      // 일반 레벨업 정답 보상: 보통 등급 위주, 가끔(25%) 희귀 1개 섞임 (스펙업 속도 완화)
+      // 일반 레벨업 정답 보상: 보통 등급 위주, 가끔(38%) 희귀 1개 섞임
       const normals = AV.filter(i=>i.tier==='normal');
-      if(Math.random()<0.25){
+      if(Math.random()<0.38){
         choices = pickN(AV.filter(i=>i.tier==='rare'),1).concat(pickN(normals,2));
       } else {
         choices = pickN(normals,3);
@@ -2124,7 +2323,7 @@ function snapshot(){ if(!S)return; const pl=S.pl;
     qLog:S.qLog,bossIdx:S.bossIdx,pl:{...pl}}); }
 function loadSave(){ const s=DB.save(); if(!s)return false;
   showScreen('screen-game'); resize();
-  S={info:s.info,pl:s.pl,enemies:[],projs:[],eprojs:[],orbs:[],parts:[],floats:[],
+  S={info:s.info,pl:s.pl,enemies:[],projs:[],eprojs:[],booms:[],orbs:[],parts:[],floats:[],
      time:s.time,spawnT:0,spawnInt:1900,bossT:32000,bossIdx:s.bossIdx||0,boss:null,
      running:true,paused:false,score:s.score,quizCount:s.quizCount,quizCorrect:s.quizCorrect,qLog:s.qLog||[],
      lastTs:performance.now(),dex:DB.dex(),usedKeys:new Set()};
