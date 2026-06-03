@@ -1365,9 +1365,10 @@ function update(dt){
     for(const e of S.enemies){ if(dist2(e,pl) < R2){ hitEnemy(e, pl.auraDmg, false); } } } }
 
   // 발사체
-  const TURN = 0.085;   // 유도 강도(라디안/프레임) — 약하게 휘어 회피 의미는 유지
+  const TURN = 0.035;       // 유도 강도(라디안/프레임) — 약하게(여러 발이 한 점으로 모이지 않도록)
+  const DEADZONE = 0.22;    // 이미 적 쪽으로 충분히 향하면(약 12.5°) 보정하지 않음
   for(const p of S.projs){
-    // 유도: 가장 가까운 적(방금 맞힌 적 제외) 쪽으로 진행 방향을 조금씩 보정
+    // 유도: 가장 가까운 적(방금 맞힌 적 제외) 쪽으로 진행 방향을 살짝만 보정
     const tgt = nearestEnemy(p.x, p.y, p._lastHit);
     if(tgt){
       const desired = Math.atan2(tgt.y-p.y, tgt.x-p.x);
@@ -1375,10 +1376,12 @@ function update(dt){
       let diff = desired - cur;
       while(diff >  Math.PI) diff -= Math.PI*2;
       while(diff < -Math.PI) diff += Math.PI*2;
-      const turn = Math.max(-TURN*dt, Math.min(TURN*dt, diff));
-      const na = cur + turn;
-      const sp = p.spd || Math.hypot(p.vx,p.vy) || 6;
-      p.vx = Math.cos(na)*sp; p.vy = Math.sin(na)*sp;
+      if(Math.abs(diff) > DEADZONE){   // 데드존 밖일 때만 살짝 휘어줌
+        const turn = Math.max(-TURN*dt, Math.min(TURN*dt, diff));
+        const na = cur + turn;
+        const sp = p.spd || Math.hypot(p.vx,p.vy) || 6;
+        p.vx = Math.cos(na)*sp; p.vy = Math.sin(na)*sp;
+      }
     }
     p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt;
     for(const e of S.enemies){
